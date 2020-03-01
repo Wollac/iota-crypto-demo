@@ -77,7 +77,7 @@ func (p BIPPath) MarshalText() ([]byte, error) {
 
 // UnmarshalText implements the encoding.TextUnmarshaler interface.
 // The BIP-32 path is expected in a form accepted by ParsePath.
-func (p *BIPPath) UnmarshalText(text []byte) error {
+func (p *BIPPath) UnmarshalText(text []byte) (err error) {
 	s := string(text)
 	x, err := ParsePath(s)
 	if err != nil {
@@ -88,7 +88,7 @@ func (p *BIPPath) UnmarshalText(text []byte) error {
 }
 
 func parseUint31(s string) (uint32, error) {
-	n, err := strconv.ParseUint(s, 10, 31)
+	n, err := strconv.ParseUint(s, 0, 31)
 	if err != nil {
 		return 0, err
 	}
