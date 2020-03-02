@@ -1,4 +1,4 @@
-package bip32path
+package bip32
 
 import (
 	"errors"
@@ -12,33 +12,33 @@ import (
 
 var parsePathTests = []*struct {
 	s    string
-	path BIPPath
+	path Path
 	err  error
 }{
-	{"", BIPPath{}, nil},
-	{"m", BIPPath{}, nil},
-	{"m/0H", BIPPath{hardened + 0}, nil},
-	{"m/0H/1", BIPPath{hardened + 0, 1}, nil},
-	{"m/0H/1/2H", BIPPath{hardened + 0, 1, hardened + 2}, nil},
-	{"m/0H/1/2H/2", BIPPath{hardened + 0, 1, hardened + 2, 2}, nil},
-	{"m/0H/1/2H/2/1000000000", BIPPath{hardened + 0, 1, hardened + 2, 2, 1000000000}, nil},
-	{"0H", BIPPath{hardened + 0}, nil},
-	{"0H/1", BIPPath{hardened + 0, 1}, nil},
-	{"0H/1/2H", BIPPath{hardened + 0, 1, hardened + 2}, nil},
-	{"0H/1/2H/2", BIPPath{hardened + 0, 1, hardened + 2, 2}, nil},
-	{"0H/1/2H/2/1000000000", BIPPath{hardened + 0, 1, hardened + 2, 2, 1000000000}, nil},
-	{"m/0'", BIPPath{hardened + 0}, nil},
-	{"m/0'/1", BIPPath{hardened + 0, 1}, nil},
-	{"m/0'/1/2'", BIPPath{hardened + 0, 1, hardened + 2}, nil},
-	{"m/0'/1/2'/2", BIPPath{hardened + 0, 1, hardened + 2, 2}, nil},
-	{"m/0'/1/2'/2/1000000000", BIPPath{hardened + 0, 1, hardened + 2, 2, 1000000000}, nil},
-	{"0'", BIPPath{hardened + 0}, nil},
-	{"0'/1", BIPPath{hardened + 0, 1}, nil},
-	{"0'/1/2'", BIPPath{hardened + 0, 1, hardened + 2}, nil},
-	{"0'/1/2'/2", BIPPath{hardened + 0, 1, hardened + 2, 2}, nil},
-	{"0'/1/2'/2/1000000000", BIPPath{hardened + 0, 1, hardened + 2, 2, 1000000000}, nil},
-	{"0/2147483647'/1/2147483646'/2", BIPPath{0, hardened + 2147483647, 1, hardened + 2147483646, 2}, nil},
-	{"0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0", BIPPath{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, nil},
+	{"", Path{}, nil},
+	{"m", Path{}, nil},
+	{"m/0H", Path{hardened + 0}, nil},
+	{"m/0H/1", Path{hardened + 0, 1}, nil},
+	{"m/0H/1/2H", Path{hardened + 0, 1, hardened + 2}, nil},
+	{"m/0H/1/2H/2", Path{hardened + 0, 1, hardened + 2, 2}, nil},
+	{"m/0H/1/2H/2/1000000000", Path{hardened + 0, 1, hardened + 2, 2, 1000000000}, nil},
+	{"0H", Path{hardened + 0}, nil},
+	{"0H/1", Path{hardened + 0, 1}, nil},
+	{"0H/1/2H", Path{hardened + 0, 1, hardened + 2}, nil},
+	{"0H/1/2H/2", Path{hardened + 0, 1, hardened + 2, 2}, nil},
+	{"0H/1/2H/2/1000000000", Path{hardened + 0, 1, hardened + 2, 2, 1000000000}, nil},
+	{"m/0'", Path{hardened + 0}, nil},
+	{"m/0'/1", Path{hardened + 0, 1}, nil},
+	{"m/0'/1/2'", Path{hardened + 0, 1, hardened + 2}, nil},
+	{"m/0'/1/2'/2", Path{hardened + 0, 1, hardened + 2, 2}, nil},
+	{"m/0'/1/2'/2/1000000000", Path{hardened + 0, 1, hardened + 2, 2, 1000000000}, nil},
+	{"0'", Path{hardened + 0}, nil},
+	{"0'/1", Path{hardened + 0, 1}, nil},
+	{"0'/1/2'", Path{hardened + 0, 1, hardened + 2}, nil},
+	{"0'/1/2'/2", Path{hardened + 0, 1, hardened + 2, 2}, nil},
+	{"0'/1/2'/2/1000000000", Path{hardened + 0, 1, hardened + 2, 2, 1000000000}, nil},
+	{"0/2147483647'/1/2147483646'/2", Path{0, hardened + 2147483647, 1, hardened + 2147483646, 2}, nil},
+	{"0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0", Path{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, nil},
 	{"44'/2147483648", nil, strconv.ErrRange},
 	{"44'/2147483648'", nil, strconv.ErrRange},
 	{"44'/-1", nil, ErrInvalidPathFormat},
@@ -65,7 +65,7 @@ func TestParsePath(t *testing.T) {
 func TestBIPPathUnmarshalText(t *testing.T) {
 	for _, tt := range parsePathTests {
 		t.Run(strings.ReplaceAll(tt.s, "/", "|"), func(t *testing.T) {
-			var path BIPPath
+			var path Path
 			err := path.UnmarshalText([]byte(tt.s))
 			assert.Equal(t, tt.path, path)
 			assert.True(t, errors.Is(err, tt.err), "unexpected error: %v", err)

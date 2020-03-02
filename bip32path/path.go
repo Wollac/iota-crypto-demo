@@ -1,4 +1,4 @@
-package bip32path
+package bip32
 
 import (
 	"errors"
@@ -17,15 +17,15 @@ const hardened uint32 = 1 << 31
 // keyReg is the regular expression for a single key.
 var keyReg = regexp.MustCompile(`(\d+)([H']?)`) // any number of digits plus an optional H or '
 
-// A BIPPath is a BIP-32 key derivation path, a slice of uint32.
-type BIPPath []uint32
+// A Path is a BIP-32 key derivation path, a slice of uint32.
+type Path []uint32
 
 // ParsePath parses s as an BIP-32 path, returning the result.
 // The string s can be in the form where the apostrophe means hardened key ("m/44'/0'/0'/0/0")
 // or where "H" means hardened key ("m/44H/0H/0H/0/0"). The "m/" prefix is mandatory.
-func ParsePath(s string) (BIPPath, error) {
+func ParsePath(s string) (Path, error) {
 	if s == "" || s == "m" {
-		return BIPPath{}, nil
+		return Path{}, nil
 	}
 	if strings.HasPrefix(s, "m/") {
 		s = s[2:]
@@ -56,7 +56,7 @@ func ParsePath(s string) (BIPPath, error) {
 // It returns:
 // - "m" for an empty path
 // - apostrophe for hardened keys ("m/44'/0'/0'/0/0")
-func (p BIPPath) String() string {
+func (p Path) String() string {
 	var builder strings.Builder
 	builder.WriteByte('m')
 
@@ -71,13 +71,13 @@ func (p BIPPath) String() string {
 
 // MarshalText implements the encoding.TextMarshaler interface.
 // The encoding is the same as returned by String.
-func (p BIPPath) MarshalText() ([]byte, error) {
+func (p Path) MarshalText() ([]byte, error) {
 	return []byte(p.String()), nil
 }
 
 // UnmarshalText implements the encoding.TextUnmarshaler interface.
 // The BIP-32 path is expected in a form accepted by ParsePath.
-func (p *BIPPath) UnmarshalText(text []byte) (err error) {
+func (p *Path) UnmarshalText(text []byte) (err error) {
 	s := string(text)
 	x, err := ParsePath(s)
 	if err != nil {

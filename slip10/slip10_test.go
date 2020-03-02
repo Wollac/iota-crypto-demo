@@ -1,9 +1,7 @@
 package slip10
 
 import (
-	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"math/rand"
 	"path/filepath"
@@ -13,30 +11,19 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wollac/iota-bip39-demo/bip32path"
+	"github.com/wollac/iota-bip39-demo/testutil"
 )
 
 type Test struct {
-	Path      bip32path.BIPPath `json:"chain"`
-	ChainCode hexBytes          `json:"chainCode"`
-	Private   hexBytes          `json:"private"`
-	Public    hexBytes          `json:"public"`
+	Path      bip32path.Path    `json:"chain"`
+	ChainCode testutil.HexBytes `json:"chainCode"`
+	Private   testutil.HexBytes `json:"private"`
+	Public    testutil.HexBytes `json:"public"`
 }
 
 type TestVector struct {
-	Seed  hexBytes `json:"seed"`
-	Tests []Test   `json:"tests"`
-}
-
-// helper struct to read hex encoded byte slices
-type hexBytes []byte
-
-func (h hexBytes) MarshalText() ([]byte, error) {
-	return []byte(hex.EncodeToString(h)), nil
-}
-
-func (h *hexBytes) UnmarshalText(text []byte) (err error) {
-	*h, err = hex.DecodeString(string(text))
-	return
+	Seed  testutil.HexBytes `json:"seed"`
+	Tests []Test            `json:"tests"`
 }
 
 func TestSecp256k1(t *testing.T) {
@@ -65,8 +52,8 @@ func readJSONTests(t *testing.T) []TestVector {
 }
 
 func runCurveTests(t *testing.T, curve Curve, tvs []TestVector) {
-	for i, tv := range tvs {
-		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
+	for _, tv := range tvs {
+		t.Run("", func(t *testing.T) {
 			runTests(t, tv.Seed, curve, tv.Tests)
 		})
 	}
