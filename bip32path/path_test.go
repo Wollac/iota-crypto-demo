@@ -1,4 +1,4 @@
-package bip32
+package bip32path
 
 import (
 	"errors"

@@ -1,4 +1,4 @@
-package bip32
+package bip32path
 
 import (
 	"errors"
@@ -20,16 +20,15 @@ var keyReg = regexp.MustCompile(`(\d+)([H']?)`) // any number of digits plus an 
 // A Path is a BIP-32 key derivation path, a slice of uint32.
 type Path []uint32
 
-// ParsePath parses s as an BIP-32 path, returning the result.
+// ParsePath parses s as a BIP-32 path, returning the result.
 // The string s can be in the form where the apostrophe means hardened key ("m/44'/0'/0'/0/0")
 // or where "H" means hardened key ("m/44H/0H/0H/0/0"). The "m/" prefix is mandatory.
 func ParsePath(s string) (Path, error) {
 	if s == "" || s == "m" {
 		return Path{}, nil
 	}
-	if strings.HasPrefix(s, "m/") {
-		s = s[2:]
-	}
+	// remove master prefix if present
+	s = strings.TrimPrefix(s, "m/")
 
 	var path []uint32
 	for i, key := range strings.Split(s, "/") {
