@@ -36,7 +36,7 @@ func TestBIP39(t *testing.T) {
 }
 
 func readJSONTests(t *testing.T) []TestVector {
-	b, err := ioutil.ReadFile(filepath.Join("testdata", "foo.json"))
+	b, err := ioutil.ReadFile(filepath.Join("testdata", t.Name()+".json"))
 	require.NoError(t, err)
 
 	var tvs []TestVector
