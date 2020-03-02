@@ -3,18 +3,18 @@ package bip39
 import (
 	"fmt"
 	"math/big"
+
+	"github.com/wollac/iota-bip39-demo/bip39/wordlists"
 )
 
 const (
 	entropyMultiple = 32
 	entropyMinBits  = 128
 	entropyMaxBits  = 512
-
-	wordIndexBits = 11
 )
 
-// bit mask for 11 least significant bits
-var wordIndexMask = big.NewInt(1<<wordIndexBits - 1)
+// bit mask for the 11 least significant bits
+var wordIndexMask = big.NewInt(1<<wordlists.IndexBits - 1)
 var bigOne = big.NewInt(1)
 
 func entToMS(ent int) int {

@@ -76,7 +76,7 @@ func EntropyToMnemonic(entropy []byte) (Mnemonic, error) {
 		words[i] = wordList.Word(int(wordIndex.Int64()))
 
 		// shift out least significant 11 bits
-		bigEntropy.Rsh(bigEntropy, wordIndexBits)
+		bigEntropy.Rsh(bigEntropy, wordlists.IndexBits)
 	}
 
 	return words, nil
@@ -98,7 +98,7 @@ func MnemonicToEntropy(mnemonic Mnemonic) ([]byte, error) {
 	for _, word := range mnemonic {
 		wordIndex := wordList.Index(word)
 
-		decoder.Lsh(decoder, wordIndexBits)
+		decoder.Lsh(decoder, wordlists.IndexBits)
 		decoder.Or(decoder, big.NewInt(int64(wordIndex)))
 	}
 
@@ -129,7 +129,5 @@ func computeChecksum(bytes []byte, numBits int) *big.Int {
 
 	// take the first numBits of the hash
 	checksum := new(big.Int).SetBytes(hash[:])
-	checksum = checksum.Rsh(checksum, uint(bitsHash-numBits))
-
-	return checksum
+	return checksum.Rsh(checksum, uint(bitsHash-numBits))
 }

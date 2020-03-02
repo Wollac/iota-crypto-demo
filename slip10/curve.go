@@ -98,7 +98,7 @@ func (ed25519Curve) SeedKey() []byte {
 
 func (ed25519Curve) ValidateChildIndex(index uint32) error {
 	// ed25519 only supports hardened indices, as public key -> public key derivation is not supported.
-	if index < FirstHardenedIndex {
+	if index < hardened {
 		return ErrNotHardened
 	}
 	return nil

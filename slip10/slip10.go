@@ -8,11 +8,14 @@ import (
 )
 
 const (
+	// PrivateKeySize is the size, in bytes, of the normal private key.
 	PrivateKeySize = 32
-	PublicKeySize  = 33
-	ChainCodeSize  = 32
+	// PublicKeySize is the size, in bytes, of the normal public key.
+	PublicKeySize = 33
+	// ChainCodeSize is the size, in bytes, of the chain code.
+	ChainCodeSize = 32
 
-	FirstHardenedIndex uint32 = 1 << 31
+	hardened uint32 = 1 << 31
 )
 
 // Key represents a SLIP-10 extended private key.
@@ -92,7 +95,7 @@ func (key *Key) NewChildKey(index uint32) (*Key, error) {
 
 func (key *Key) getIntermediary(childIndex uint32) ([]byte, error) {
 	var data []byte
-	if childIndex >= FirstHardenedIndex {
+	if childIndex >= hardened {
 		data = append([]byte{0x0}, key.Key...)
 	} else {
 		data = key.curve.PublicKey(key)
