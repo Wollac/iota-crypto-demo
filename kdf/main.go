@@ -60,10 +60,10 @@ func main() {
 
 	fmt.Println("==> Key Derivation Parameters")
 
-	fmt.Printf("entropy (%d-byte):\t%x\n", len(entropy), entropy)
-	fmt.Printf("mnemonic (%d-word):\t%s\n", len(mnemonic), mnemonic)
-	fmt.Printf("optional passphrase:\t\"%s\"\n", *passphrase)
-	fmt.Printf("master seed (%d-byte):\t%x\n", len(seed), seed)
+	fmt.Printf(" entropy (%d-byte):\t%x\n", len(entropy), entropy)
+	fmt.Printf(" mnemonic (%d-word):\t%s\n", len(mnemonic), mnemonic)
+	fmt.Printf(" optional passphrase:\t\"%s\"\n", *passphrase)
+	fmt.Printf(" master seed (%d-byte):\t%x\n", len(seed), seed)
 
 	fmt.Println("\n==> Legacy IOTA Seed Derivation (Ledger App)")
 
