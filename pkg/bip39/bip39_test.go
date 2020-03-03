@@ -68,41 +68,51 @@ func TestEntropyToMnemonic(t *testing.T) {
 	}
 }
 
+var invalidMnemonicTests = []*struct {
+	mnemonic Mnemonic
+	expErr   error
+}{
+	{
+		ParseMnemonic(strings.Repeat("abandon ", 9)), // too short
+		ErrInvalidMnemonic,
+	},
+	{
+		ParseMnemonic(strings.Repeat("abandon ", 51)), // too long
+		ErrInvalidMnemonic,
+	},
+	{
+		ParseMnemonic(strings.Repeat("abandon ", 17)), // not a multiple of 3
+		ErrInvalidMnemonic,
+	},
+	{
+		ParseMnemonic(strings.Repeat("abandon ", 19)), // not a multiple of 3
+		ErrInvalidMnemonic,
+	},
+	{
+		ParseMnemonic(strings.Repeat("brummagem ", 18)), // not in word list
+		ErrInvalidMnemonic,
+	},
+	{
+		ParseMnemonic(strings.Repeat("abandon ", 12)), // not in word list
+		ErrInvalidChecksum,
+	},
+}
+
 func TestMnemonicToEntropy(t *testing.T) {
 	SetWordList(wordlists.English)
-	var tests = []*struct {
-		mnemonic Mnemonic
-		expErr   error
-	}{
-		{
-			ParseMnemonic(strings.Repeat("abandon ", 9)), // too short
-			ErrInvalidMnemonic,
-		},
-		{
-			ParseMnemonic(strings.Repeat("abandon ", 51)), // too long
-			ErrInvalidMnemonic,
-		},
-		{
-			ParseMnemonic(strings.Repeat("abandon ", 17)), // not a multiple of 3
-			ErrInvalidMnemonic,
-		},
-		{
-			ParseMnemonic(strings.Repeat("abandon ", 19)), // not a multiple of 3
-			ErrInvalidMnemonic,
-		},
-		{
-			ParseMnemonic(strings.Repeat("brummagem ", 18)), // not in word list
-			ErrInvalidMnemonic,
-		},
-		{
-			ParseMnemonic(strings.Repeat("abandon ", 12)), // not in word list
-			ErrInvalidChecksum,
-		},
-	}
-
-	for _, tt := range tests {
+	for _, tt := range invalidMnemonicTests {
 		t.Run(fmt.Sprintf("%v", tt.expErr), func(t *testing.T) {
 			_, err := MnemonicToEntropy(tt.mnemonic)
+			assert.Truef(t, errors.Is(err, tt.expErr), "unexpected error: %v", err)
+		})
+	}
+}
+
+func TestMnemonicToSeed(t *testing.T) {
+	SetWordList(wordlists.English)
+	for _, tt := range invalidMnemonicTests {
+		t.Run(fmt.Sprintf("%v", tt.expErr), func(t *testing.T) {
+			_, err := MnemonicToSeed(tt.mnemonic, "")
 			assert.Truef(t, errors.Is(err, tt.expErr), "unexpected error: %v", err)
 		})
 	}
@@ -140,7 +150,8 @@ func runTests(t *testing.T, tests []Test) {
 			assert.NoError(t, err)
 			assert.EqualValues(t, tt.Entropy, ent)
 
-			seed := MnemonicToSeed(tt.Mnemonic, tt.Passphrase)
+			seed, err := MnemonicToSeed(tt.Mnemonic, tt.Passphrase)
+			assert.NoError(t, err)
 			assert.EqualValues(t, tt.Seed, seed)
 		})
 	}

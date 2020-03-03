@@ -40,10 +40,15 @@ func SetWordList(s string) {
 
 // MnemonicToSeed creates a hashed seed output given a provided string and password.
 // No checking is performed to validate that the string provided is a valid mnemonic.
-func MnemonicToSeed(mnemonic Mnemonic, passphrase string) []byte {
+func MnemonicToSeed(mnemonic Mnemonic, passphrase string) ([]byte, error) {
+	// validate mnemonic
+	if _, err := MnemonicToEntropy(mnemonic); err != nil {
+		return nil, err
+	}
 	// UTF-8 NFKD
 	passphrase = norm.NFKD.String(passphrase)
-	return pbkdf2.Key([]byte(mnemonic.String()), []byte("mnemonic"+passphrase), 2048, SeedSize, sha512.New)
+	key := pbkdf2.Key([]byte(mnemonic.String()), []byte("mnemonic"+passphrase), 2048, SeedSize, sha512.New)
+	return key, nil
 }
 
 // EntropyToMnemonic generates a BIP-39 mnemonic sentence that satisfies the given entropy length.
