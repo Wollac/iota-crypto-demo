@@ -10,8 +10,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/wollac/iota-bip39-demo/bip32path"
-	"github.com/wollac/iota-bip39-demo/testutil"
+	"github.com/wollac/iota-bip39-demo/pkg/bip32path"
+	"github.com/wollac/iota-bip39-demo/pkg/testutil"
 )
 
 type Test struct {

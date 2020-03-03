@@ -8,9 +8,9 @@ import (
 	"github.com/iotaledger/iota.go/kerl"
 	"github.com/iotaledger/iota.go/trinary"
 	flag "github.com/spf13/pflag"
-	"github.com/wollac/iota-bip39-demo/bip32path"
-	"github.com/wollac/iota-bip39-demo/bip39"
-	"github.com/wollac/iota-bip39-demo/slip10"
+	"github.com/wollac/iota-bip39-demo/pkg/bip32path"
+	"github.com/wollac/iota-bip39-demo/pkg/bip39"
+	"github.com/wollac/iota-bip39-demo/pkg/slip10"
 )
 
 var (

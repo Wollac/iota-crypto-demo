@@ -6,7 +6,7 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/wollac/iota-bip39-demo/bip39/wordlists"
+	"github.com/wollac/iota-bip39-demo/pkg/bip39/wordlists"
 	"golang.org/x/crypto/pbkdf2"
 	"golang.org/x/text/unicode/norm"
 )
