@@ -2,6 +2,8 @@ package bip39
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io/ioutil"
 	"path/filepath"
 	"strings"
@@ -31,6 +33,77 @@ func TestBIP39(t *testing.T) {
 		t.Run(tv.Language, func(t *testing.T) {
 			setLanguage(t, tv.Language)
 			runTests(t, tv.Tests)
+		})
+	}
+}
+
+func TestEntropyToMnemonic(t *testing.T) {
+	var tests = []*struct {
+		entropy []byte
+		expErr  error
+	}{
+		{
+			make([]byte, 12), // too small
+			ErrInvalidEntropySize,
+		},
+		{
+			make([]byte, 68), // too big
+			ErrInvalidEntropySize,
+		},
+		{
+			make([]byte, 23), // not a multiple of 4
+			ErrInvalidEntropySize,
+		},
+		{
+			make([]byte, 25), // not a multiple of 4
+			ErrInvalidEntropySize,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(fmt.Sprintf("%v", tt.expErr), func(t *testing.T) {
+			_, err := EntropyToMnemonic(tt.entropy)
+			assert.Truef(t, errors.Is(err, tt.expErr), "unexpected error: %v", err)
+		})
+	}
+}
+
+func TestMnemonicToEntropy(t *testing.T) {
+	SetWordList(wordlists.English)
+	var tests = []*struct {
+		mnemonic Mnemonic
+		expErr   error
+	}{
+		{
+			ParseMnemonic(strings.Repeat("abandon ", 9)), // too short
+			ErrInvalidMnemonic,
+		},
+		{
+			ParseMnemonic(strings.Repeat("abandon ", 51)), // too long
+			ErrInvalidMnemonic,
+		},
+		{
+			ParseMnemonic(strings.Repeat("abandon ", 17)), // not a multiple of 3
+			ErrInvalidMnemonic,
+		},
+		{
+			ParseMnemonic(strings.Repeat("abandon ", 19)), // not a multiple of 3
+			ErrInvalidMnemonic,
+		},
+		{
+			ParseMnemonic(strings.Repeat("brummagem ", 18)), // not in word list
+			ErrInvalidMnemonic,
+		},
+		{
+			ParseMnemonic(strings.Repeat("abandon ", 12)), // not in word list
+			ErrInvalidChecksum,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(fmt.Sprintf("%v", tt.expErr), func(t *testing.T) {
+			_, err := MnemonicToEntropy(tt.mnemonic)
+			assert.Truef(t, errors.Is(err, tt.expErr), "unexpected error: %v", err)
 		})
 	}
 }

@@ -65,7 +65,7 @@ func EntropyToMnemonic(entropy []byte) (Mnemonic, error) {
 	bigEntropy.Or(bigEntropy, checksum)
 
 	// allocate the number of mnemonic words soon to be generated
-	words := make(Mnemonic, entToMS(bitsEntropy))
+	words := make(Mnemonic, entropyBitsToWordCount(bitsEntropy))
 
 	// split into groups of 11 bits, each encoding a number from 0-2047, serving as an index into a word list
 	wordIndex := big.NewInt(0)
@@ -90,7 +90,7 @@ func MnemonicToEntropy(mnemonic Mnemonic) ([]byte, error) {
 	}
 
 	// compute bit counts
-	bitsEntropy := msToEnt(len(mnemonic))
+	bitsEntropy := wordCountToEntropyBits(len(mnemonic))
 	bitsChecksum := bitsEntropy / entropyMultiple
 
 	// use a big.Int to decode words for easier bitwise operations

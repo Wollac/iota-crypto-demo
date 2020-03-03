@@ -17,12 +17,12 @@ const (
 var wordIndexMask = big.NewInt(1<<wordlists.IndexBits - 1)
 var bigOne = big.NewInt(1)
 
-func entToMS(ent int) int {
-	return 3 * ent / 32
+func entropyBitsToWordCount(n int) int {
+	return 3 * n / 32
 }
 
-func msToEnt(ms int) int {
-	return 32 * ms / 3
+func wordCountToEntropyBits(n int) int {
+	return 32 * n / 3
 }
 
 // check that the number of bits is within max, min and a multiple of 32
@@ -36,7 +36,7 @@ func validateEntropy(entropy []byte) error {
 
 func validateMnemonic(mnemonic Mnemonic) error {
 	ms := len(mnemonic)
-	if ms%3 != 0 || entToMS(entropyMinBits) > ms || ms > entToMS(entropyMaxBits) {
+	if ms%3 != 0 || entropyBitsToWordCount(entropyMinBits) > ms || ms > entropyBitsToWordCount(entropyMaxBits) {
 		return fmt.Errorf("%w: unsupported word count (%d)", ErrInvalidMnemonic, ms)
 	}
 
@@ -51,7 +51,7 @@ func validateMnemonic(mnemonic Mnemonic) error {
 func padBytes(b []byte, size int) []byte {
 	l := len(b)
 	if l > size {
-		panic(fmt.Sprintf("invalid size: %d", l))
+		panic("invalid byte size")
 	}
 	// append zeros to match the requested size
 	return append(b, make([]byte, size-l)...)

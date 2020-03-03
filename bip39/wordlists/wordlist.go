@@ -57,7 +57,7 @@ func (w *WordList) Word(i int) string {
 func (w *WordList) Index(word string) int {
 	index, ok := w.indexes[word]
 	if !ok {
-		panic("unknown word: " + word)
+		panic("unknown word")
 	}
 	return index
 }
