@@ -4,7 +4,7 @@ import (
 	"crypto/rand"
 	"flag"
 	"fmt"
-	"log"
+	"os"
 
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/kerl"
@@ -33,29 +33,40 @@ var (
 )
 
 func main() {
+	flag.Parse()
+
+	if err := run(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %s\n", err)
+		os.Exit(1)
+	}
+}
+
+func run() error {
 	var (
 		err      error
 		entropy  []byte
 		mnemonic bip39.Mnemonic
 	)
-	flag.Parse()
 
 	if len(*mnemonicString) == 0 {
 		// no mnemonic given, generate
-		entropy = generateEntropy(256 / 8 /* 256 bits */)
+		entropy, err = generateEntropy(256 / 8 /* 256 bits */)
+		if err != nil {
+			return fmt.Errorf("failed generating entropy: %w", err)
+		}
 		mnemonic, _ = bip39.EntropyToMnemonic(entropy)
 	} else {
 		mnemonic = bip39.ParseMnemonic(*mnemonicString)
 		entropy, err = bip39.MnemonicToEntropy(mnemonic)
 		if err != nil {
-			log.Fatalf("invalid mnemonic: %s", err)
+			return fmt.Errorf("invalid path: %w", err)
 		}
 	}
 
 	seed, _ := bip39.MnemonicToSeed(mnemonic, *passphrase)
 	path, err := bip32path.ParsePath(*pathString)
 	if err != nil {
-		log.Fatalf("invalid path (%s): %s", *pathString, err)
+		return fmt.Errorf("invalid path: %w", err)
 	}
 
 	fmt.Println("==> Key Derivation Parameters")
@@ -70,7 +81,7 @@ func main() {
 	curve := slip10.Secp256k1()
 	key, err := slip10.DeriveKeyFromPath(seed, curve, path)
 	if err != nil {
-		log.Fatalf("error deriving key: %s", err)
+		return fmt.Errorf("failed deriving %s key: %w", curve.Name(), err)
 	}
 
 	fmt.Printf(" SLIP-10 curve seed:\t%s\n", curve.SeedKey())
@@ -85,7 +96,7 @@ func main() {
 	curve = slip10.Ed25519()
 	key, err = slip10.DeriveKeyFromPath(seed, curve, path)
 	if err != nil {
-		log.Fatalf("error deriving key: %s", err)
+		return fmt.Errorf("failed deriving %s key: %w", curve.Name(), err)
 	}
 
 	fmt.Printf(" SLIP-10 curve seed:\t%s\n", curve.SeedKey())
@@ -94,14 +105,16 @@ func main() {
 	fmt.Printf(" private key (%d-byte):\t%x\n", slip10.PrivateKeySize, key.Key)
 	fmt.Printf(" chain code (%d-byte):\t%x\n", slip10.ChainCodeSize, key.ChainCode)
 	fmt.Printf(" public key (%d-byte):\t%x\n", slip10.PublicKeySize, curve.PublicKey(key))
+
+	return nil
 }
 
-func generateEntropy(size int) []byte {
+func generateEntropy(size int) ([]byte, error) {
 	entropy := make([]byte, size)
 	if _, err := rand.Read(entropy); err != nil {
-		log.Fatalf("failed to generate entropy: %s", err)
+		return nil, err
 	}
-	return entropy
+	return entropy, nil
 }
 
 // Legacy IOTA seed derivation as implemented in the blue-app-iota:

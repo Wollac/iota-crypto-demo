@@ -5,13 +5,15 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"log"
+	"os"
+	"strings"
 
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/guards"
 	"github.com/iotaledger/iota.go/kerl"
 	"github.com/iotaledger/iota.go/trinary"
 	"github.com/wollac/iota-bip39-demo/pkg/bip39"
+	"golang.org/x/crypto/sha3"
 )
 
 var (
@@ -20,29 +22,52 @@ var (
 		"",
 		"IOTA seed; if empty a new random seed is generated",
 	)
+	language = flag.String(
+		"language",
+		"english",
+		"language of the mnemonics",
+	)
 )
 
 func main() {
 	flag.Parse()
 
+	sha3.New384()
+	if err := run(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %s\n", err)
+		os.Exit(1)
+	}
+}
+
+func run() error {
+	var err error
+
 	if len(*seed) == 0 {
-		*seed = generateSeed()
+		*seed, err = generateSeed()
+		if err != nil {
+			return err
+		}
+	}
+	if err := bip39.SetWordList(strings.ToLower(*language)); err != nil {
+		return err
 	}
 
 	mnemonic, err := seedToMnemonic(*seed)
 	if err != nil {
-		log.Fatalf("error encoding mnemonic: %s", err)
+		return fmt.Errorf("failed encoding seed: %w", err)
 	}
 	decoded, err := mnemonicToSeed(mnemonic)
 	if err != nil {
-		log.Fatalf("error decoding seed: %s", err)
+		return fmt.Errorf("failed decoding mnemonic: %w", err)
 	}
 
 	fmt.Println("==> IOTA Seed Mnemonics")
 
-	fmt.Printf("input seed(%d-tryte):\t%s\n", len(*seed), *seed)
-	fmt.Printf("mnemonic(%d-word):\t%s\n", len(mnemonic), mnemonic)
-	fmt.Printf("decoded seed(%d-tryte):\t%s\n", len(decoded), decoded)
+	fmt.Printf(" input seed (%d-tryte):\t\t%s\n", len(*seed), *seed)
+	fmt.Printf(" mnemonic (%d-word):\t\t%s\n", len(mnemonic), mnemonic)
+	fmt.Printf(" decoded seed (%d-tryte):\t%s\n", len(decoded), decoded)
+
+	return nil
 }
 
 func seedToMnemonic(seed trinary.Hash) (bip39.Mnemonic, error) {
@@ -68,23 +93,24 @@ func mnemonicToSeed(mnemonic bip39.Mnemonic) (trinary.Hash, error) {
 	}
 	return kerl.KerlBytesToTrytes(seedBytes)
 }
-func generateSeed() trinary.Hash {
+
+func generateSeed() (trinary.Hash, error) {
 	entropy := make([]byte, consts.HashBytesSize)
 	if _, err := rand.Read(entropy); err != nil {
-		log.Fatalf("error generating entropy: %s", err)
+		return "", fmt.Errorf("error generating entropy: %s", err)
 	}
 	trytes, err := kerl.KerlBytesToTrytes(entropy)
 	if err != nil {
-		log.Fatalf("error converting seed: %s", err)
+		return "", fmt.Errorf("error converting seed: %s", err)
 	}
-	return trytes
+	return trytes, nil
 }
 
 func validateSeed(seed trinary.Hash) error {
 	if !guards.IsTrytesOfExactLength(seed, consts.HashTrytesSize) {
 		return errors.New("invalid trytes")
 	}
-	// last bundle seed trit must be zero
+	// last trit must be zero to fit into 48 bytes
 	lastTrits := trinary.MustTrytesToTrits(string(seed[consts.HashTrytesSize-1]))
 	if lastTrits[consts.TritsPerTryte-1] != 0 {
 		return errors.New("last trit not zero")
