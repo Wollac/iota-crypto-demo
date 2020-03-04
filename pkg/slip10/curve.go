@@ -17,6 +17,8 @@ var (
 
 // A Curve represents a curve type to derive private and public key pairs for.
 type Curve interface {
+	// Name returns the identifier of the curve.
+	Name() string
 	// SeedKey returns the HMAC key used for the master key generation.
 	SeedKey() []byte
 	// ValidateChildIndex checks whether the given child index leads to a valid key derivation.
@@ -30,6 +32,10 @@ type Curve interface {
 
 type ellipticCurve struct {
 	elliptic.Curve
+}
+
+func (e *ellipticCurve) Name() string {
+	return e.Params().Name
 }
 
 func (ellipticCurve) ValidateChildIndex(index uint32) error {
@@ -91,6 +97,10 @@ func (nist256p1Curve) SeedKey() []byte {
 }
 
 type ed25519Curve struct{}
+
+func (ed25519Curve) Name() string {
+	return "ed25519"
+}
 
 func (ed25519Curve) SeedKey() []byte {
 	return []byte("ed25519 seed")
