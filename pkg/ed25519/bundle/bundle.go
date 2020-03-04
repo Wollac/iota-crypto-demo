@@ -3,8 +3,11 @@ package bundle
 import (
 	"crypto/ed25519"
 	"errors"
+	"strings"
 
 	"github.com/iotaledger/iota.go/bundle"
+	"github.com/iotaledger/iota.go/consts"
+	"github.com/iotaledger/iota.go/kerl"
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
 	"github.com/wollac/iota-bip39-demo/pkg/ed25519/address"
@@ -28,7 +31,7 @@ type (
 	}
 )
 
-func ValidateSignature(txs bundle.Bundle) (bool, error) {
+func ValidateSignatures(txs transaction.Transactions) (bool, error) {
 	for i := range txs {
 		// skip non-inputs
 		if txs[i].Value >= 0 {
@@ -91,9 +94,7 @@ func Generate(transfers []bundle.Transfer, inputs []Input, txTimestamp uint64) (
 	}
 
 	// finalize bundle by adding the bundle hash
-	// TODO: do not do mini-PoW
-	txs, err = bundle.Finalize(txs)
-	if err != nil {
+	if err := Finalize(txs); err != nil {
 		return nil, err
 	}
 
@@ -108,6 +109,78 @@ func Generate(transfers []bundle.Transfer, inputs []Input, txTimestamp uint64) (
 	}
 
 	return txs, nil
+}
+
+// Finalize finalizes the bundle by calculating the bundle hash and setting it on each transaction bundle hash field.
+func Finalize(txs transaction.Transactions) error {
+	k := kerl.NewKerl()
+	for i := range txs {
+		var essence strings.Builder
+		essence.Grow(2 * consts.HashTrytesSize)
+
+		essence.WriteString(txs[i].Address)
+		essence.WriteString(trinary.IntToTrytes(txs[i].Value, consts.ValueSizeTrinary/3))
+		essence.WriteString(trinary.MustPad(txs[i].ObsoleteTag, consts.TagTrinarySize/3))
+		essence.WriteString(trinary.IntToTrytes(int64(txs[i].Timestamp), consts.TimestampTrinarySize/3))
+		essence.WriteString(trinary.IntToTrytes(int64(txs[i].CurrentIndex), consts.CurrentIndexTrinarySize/3))
+		essence.WriteString(trinary.IntToTrytes(int64(txs[i].LastIndex), consts.LastIndexTrinarySize/3))
+
+		k.MustAbsorbTrytes(essence.String())
+	}
+
+	// set the computed bundle hash on each tx in the bundle
+	bundleHash := k.MustSqueezeTrytes(consts.HashTrinarySize)
+	for i := range txs {
+		txs[i].Bundle = bundleHash
+	}
+	return nil
+}
+
+// Validate checks if a bundle is syntactically valid.
+func Validate(bundle transaction.Transactions) error {
+	var totalSum int64
+
+	k := kerl.NewKerl()
+
+	lastIndex := uint64(len(bundle) - 1)
+	for i := range bundle {
+		tx := &bundle[i]
+		totalSum += tx.Value
+
+		if tx.CurrentIndex != uint64(i) {
+			return consts.ErrInvalidBundle
+		}
+		if tx.LastIndex != lastIndex {
+			return consts.ErrInvalidBundle
+		}
+
+		k.MustAbsorbTrytes(transaction.MustTransactionToTrytes(tx)[2187 : 2187+162])
+	}
+
+	// sum of all transaction must be 0
+	if totalSum != 0 {
+		return consts.ErrInvalidBundle
+	}
+
+	bundleHash, err := k.SqueezeTrytes(consts.HashTrinarySize)
+	if err != nil {
+		return err
+	}
+
+	if bundleHash != bundle[0].Bundle {
+		return consts.ErrInvalidBundleHash
+	}
+
+	// validate the signatures
+	valid, err := ValidateSignatures(bundle)
+	if err != nil {
+		return err
+	}
+
+	if !valid {
+		return consts.ErrInvalidSignature
+	}
+	return nil
 }
 
 func totalOutputValue(transfers []bundle.Transfer) (uint64, error) {

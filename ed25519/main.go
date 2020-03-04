@@ -80,17 +80,17 @@ func run() error {
 		}
 	}
 
-	txs, err := bundle.Generate(bundle.Transfers{output}, inputs, *timestamp)
+	bndl, err := bundle.Generate(bundle.Transfers{output}, inputs, *timestamp)
 	if err != nil {
 		return err
 	}
-	valid, err := bundle.ValidateSignature(txs)
-	if err != nil {
+	// do a sanity check of signatures and structure
+	if err := bundle.Validate(bndl); err != nil {
 		return err
 	}
 
-	fmt.Printf("\n==> Signed Bundle (signature validity: %t)\n", valid)
-	if err := printBundle(txs); err != nil {
+	fmt.Printf("\n==> Signed Bundle\n")
+	if err := printBundle(bndl); err != nil {
 		return err
 	}
 	return nil
@@ -135,7 +135,7 @@ func printBundle(txs []transaction.Transaction) error {
 		}
 		shortened = append(shortened, tx)
 	}
-
+	// pretty marshal
 	b, err := json.MarshalIndent(shortened, "", " ")
 	if err != nil {
 		return err

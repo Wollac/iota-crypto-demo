@@ -10,7 +10,7 @@ import (
 	"github.com/iotaledger/iota.go/guards"
 	"github.com/iotaledger/iota.go/kerl"
 	"github.com/iotaledger/iota.go/trinary"
-	address2 "github.com/wollac/iota-bip39-demo/pkg/ed25519/address"
+	"github.com/wollac/iota-bip39-demo/pkg/ed25519/address"
 )
 
 const (
@@ -35,7 +35,7 @@ func Generate(priv ed25519.PrivateKey, bundleHash trinary.Hash) (trinary.Trytes,
 	return trinary.Pad(trytes, consts.SignatureMessageFragmentSizeInTrytes)
 }
 
-func Verify(address trinary.Hash, signatureFragment trinary.Trytes, bundleHash trinary.Hash) (bool, error) {
+func Verify(addressTrytes trinary.Hash, signatureFragment trinary.Trytes, bundleHash trinary.Hash) (bool, error) {
 	if !guards.IsTrytesOfExactLength(signatureFragment, consts.SignatureMessageFragmentSizeInTrytes) {
 		return false, errors.New("invalid signature fragment")
 	}
@@ -52,8 +52,8 @@ func Verify(address trinary.Hash, signatureFragment trinary.Trytes, bundleHash t
 	publicKey := signatureBytes[:ed25519.PublicKeySize]
 	sig := signatureBytes[ed25519.PublicKeySize:]
 
-	expectedAddress, err := address2.FromPublicKey(publicKey)
-	if err != nil || expectedAddress != address {
+	expectedAddress, err := address.FromPublicKey(publicKey)
+	if err != nil || expectedAddress != addressTrytes {
 		return false, nil
 	}
 
