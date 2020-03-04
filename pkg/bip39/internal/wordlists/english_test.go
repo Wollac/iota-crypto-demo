@@ -7,6 +7,6 @@ import (
 )
 
 func TestEnglish(t *testing.T) {
-	assert.NotPanics(t, func() { Init(English) })
-	testWordListHash(t, English, "english.txt")
+	assert.NotPanics(t, func() { English() })
+	testWordListHash(t, english, "english.txt")
 }

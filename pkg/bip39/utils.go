@@ -3,8 +3,6 @@ package bip39
 import (
 	"fmt"
 	"math/big"
-
-	"github.com/wollac/iota-bip39-demo/pkg/bip39/wordlists"
 )
 
 const (
@@ -14,7 +12,7 @@ const (
 )
 
 // bit mask for the 11 least significant bits
-var wordIndexMask = big.NewInt(1<<wordlists.IndexBits - 1)
+var wordIndexMask = big.NewInt(1<<11 - 1)
 var bigOne = big.NewInt(1)
 
 func entropyBitsToWordCount(n int) int {

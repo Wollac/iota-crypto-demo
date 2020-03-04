@@ -1,7 +1,15 @@
 package wordlists
 
-// Japanese is a string of the mnemonic words for the Japanese language taken from the BIP-39 specification.
-var Japanese = `あいこくしん
+import (
+	"github.com/wollac/iota-bip39-demo/pkg/bip39/wordlist"
+)
+
+// Japanese returns the  mnemonic word list for the Japanese language taken from the BIP-39 specification.
+func Japanese() wordlist.List {
+	return newWordList(japanese)
+}
+
+var japanese = `あいこくしん
 あいさつ
 あいだ
 あおぞら

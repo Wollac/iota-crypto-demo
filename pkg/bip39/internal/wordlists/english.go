@@ -1,7 +1,15 @@
 package wordlists
 
-// English is a string of the mnemonic words for the English language taken from the BIP-39 specification.
-var English = `abandon
+import (
+	"github.com/wollac/iota-bip39-demo/pkg/bip39/wordlist"
+)
+
+// English returns the  mnemonic word list for the English language taken from the BIP-39 specification.
+func English() wordlist.List {
+	return newWordList(english)
+}
+
+var english = `abandon
 ability
 able
 about

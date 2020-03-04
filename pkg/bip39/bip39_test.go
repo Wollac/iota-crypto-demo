@@ -11,7 +11,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/wollac/iota-bip39-demo/pkg/bip39/wordlists"
 	"github.com/wollac/iota-bip39-demo/pkg/testutil"
 )
 
@@ -31,7 +30,7 @@ func TestBIP39(t *testing.T) {
 	tvs := readJSONTests(t)
 	for _, tv := range tvs {
 		t.Run(tv.Language, func(t *testing.T) {
-			setLanguage(t, tv.Language)
+			require.NoError(t, SetWordList(strings.ToLower(tv.Language)))
 			runTests(t, tv.Tests)
 		})
 	}
@@ -99,7 +98,8 @@ var invalidMnemonicTests = []*struct {
 }
 
 func TestMnemonicToEntropy(t *testing.T) {
-	SetWordList(wordlists.English)
+	require.NoError(t, SetWordList(defaultLanguage))
+
 	for _, tt := range invalidMnemonicTests {
 		t.Run(fmt.Sprintf("%v", tt.expErr), func(t *testing.T) {
 			_, err := MnemonicToEntropy(tt.mnemonic)
@@ -109,7 +109,8 @@ func TestMnemonicToEntropy(t *testing.T) {
 }
 
 func TestMnemonicToSeed(t *testing.T) {
-	SetWordList(wordlists.English)
+	require.NoError(t, SetWordList(defaultLanguage))
+
 	for _, tt := range invalidMnemonicTests {
 		t.Run(fmt.Sprintf("%v", tt.expErr), func(t *testing.T) {
 			_, err := MnemonicToSeed(tt.mnemonic, "")
@@ -126,17 +127,6 @@ func readJSONTests(t *testing.T) []TestVector {
 	err = json.Unmarshal(b, &tvs)
 	require.NoError(t, err)
 	return tvs
-}
-
-func setLanguage(t *testing.T, language string) {
-	switch strings.ToLower(language) {
-	case "english":
-		SetWordList(wordlists.English)
-	case "japanese":
-		SetWordList(wordlists.Japanese)
-	default:
-		t.Fatalf("unexpected language: %s", language)
-	}
 }
 
 func runTests(t *testing.T, tests []Test) {

@@ -4,9 +4,11 @@ import (
 	"crypto/sha256"
 	"crypto/sha512"
 	"errors"
+	"log"
 	"math/big"
 
-	"github.com/wollac/iota-bip39-demo/pkg/bip39/wordlists"
+	"github.com/wollac/iota-bip39-demo/pkg/bip39/internal/wordlists"
+	"github.com/wollac/iota-bip39-demo/pkg/bip39/wordlist"
 	"golang.org/x/crypto/pbkdf2"
 	"golang.org/x/text/unicode/norm"
 )
@@ -23,20 +25,23 @@ var (
 const (
 	// SeedSize is the size, in bytes, of a BIP-39 seed.
 	SeedSize = 64
+
+	// default word list language
+	defaultLanguage = "english"
 )
 
-// wordList is the set of words to use
-var wordList *wordlists.WordList
-
 func init() {
-	SetWordList(wordlists.English)
+	// register internal word lists
+	RegisterWordList("english", wordlists.English)
+	RegisterWordList("japanese", wordlists.Japanese)
+
+	// enable default language
+	if err := SetWordList(defaultLanguage); err != nil {
+		log.Fatalf("error setting default language: %s", err)
+	}
 }
 
-// SetWordList sets the list of words to use for mnemonics.
-// The input is a white space separated list of 2048 distinct words.
-func SetWordList(s string) {
-	wordList = wordlists.Init(s)
-}
+var wordList wordlist.List
 
 // MnemonicToSeed creates a hashed seed output given a provided string and password.
 // No checking is performed to validate that the string provided is a valid mnemonic.
@@ -81,7 +86,7 @@ func EntropyToMnemonic(entropy []byte) (Mnemonic, error) {
 		words[i] = wordList.Word(int(wordIndex.Int64()))
 
 		// shift out least significant 11 bits
-		bigEntropy.Rsh(bigEntropy, wordlists.IndexBits)
+		bigEntropy.Rsh(bigEntropy, wordlist.IndexBits)
 	}
 
 	return words, nil
@@ -102,8 +107,11 @@ func MnemonicToEntropy(mnemonic Mnemonic) ([]byte, error) {
 	decoder := big.NewInt(0)
 	for _, word := range mnemonic {
 		wordIndex := wordList.Index(word)
+		if wordIndex < 0 || wordIndex >= wordlist.Count {
+			panic("invalid word index")
+		}
 
-		decoder.Lsh(decoder, wordlists.IndexBits)
+		decoder.Lsh(decoder, wordlist.IndexBits)
 		decoder.Or(decoder, big.NewInt(int64(wordIndex)))
 	}
 
