@@ -2,6 +2,7 @@ package address
 
 import (
 	"crypto/ed25519"
+	"fmt"
 
 	"github.com/iotaledger/iota.go/checksum"
 	"github.com/iotaledger/iota.go/consts"
@@ -11,11 +12,17 @@ import (
 )
 
 func Generate(keyPair ed25519.PrivateKey, addChecksum ...bool) (trinary.Trytes, error) {
+	if l := len(keyPair); l != ed25519.PrivateKeySize {
+		return "", fmt.Errorf("%w: invalid key length %d", consts.ErrInvalidBytesLength, l)
+	}
 	publicKey := keyPair.Public().(ed25519.PublicKey)
 	return FromPublicKey(publicKey, addChecksum...)
 }
 
 func FromPublicKey(publicKey ed25519.PublicKey, addChecksum ...bool) (trinary.Trytes, error) {
+	if l := len(publicKey); l != ed25519.PublicKeySize {
+		return "", fmt.Errorf("%w: invalid key length %d", consts.ErrInvalidBytesLength, l)
+	}
 	addressBytes := sumLegacyKeccak384(publicKey)
 	addressTrytes, err := kerl.KerlBytesToTrytes(addressBytes)
 	if err != nil {

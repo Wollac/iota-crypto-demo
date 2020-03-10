@@ -80,6 +80,11 @@ func Generate(transfers []bundle.Transfer, inputs []Input, txTimestamp uint64) (
 		txs = bundle.AddEntry(txs, entry)
 	}
 
+	// assure that the timestamp is correct
+	for i := range txs {
+		txs[i].Timestamp = txTimestamp
+	}
+
 	// validate balance
 	totalOutput, err := totalOutputValue(transfers)
 	if err != nil {
@@ -101,7 +106,7 @@ func Generate(transfers []bundle.Transfer, inputs []Input, txTimestamp uint64) (
 	// add signature fragments
 	for i := range inputs {
 		idx := inputIndices[i]
-		signedFrag, err := sign.Generate(inputs[i].KeyPair, txs[idx].Bundle)
+		signedFrag, err := sign.Sign(inputs[i].KeyPair, txs[idx].Bundle)
 		if err != nil {
 			return nil, err
 		}

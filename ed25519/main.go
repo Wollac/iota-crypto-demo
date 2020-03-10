@@ -32,7 +32,7 @@ var (
 )
 
 var output = bundle.Transfer{
-	Address: "CXKGVXEIOPZ9GNZSOK9FNAOUJGZJTMLUNOZXQFUORDFPVQANZGYJUYWPHVGMO9JULGFZYHAAXEIJGCBID",
+	Address: consts.NullHashTrytes,
 	Value:   1000000000,
 	Tag:     "EDTWOFIVEFIVEONENINE",
 }
@@ -114,8 +114,8 @@ func printInput(keyPair ed25519.PrivateKey, addressTrytes trinary.Trytes, indent
 
 	fmt.Printf("%sprivate key (%d-byte):%x\n", indent, len(privateKey), privateKey)
 	fmt.Printf("%spublic key (%d-byte):\t%x\n", indent, len(publicKey), publicKey)
+	fmt.Printf("%spubkey hash (%d-byte):%x\n", indent, len(addressBytes), addressBytes)
 	fmt.Printf("%saddress (%d-tryte):\t%s\n", indent, len(addressTrytes), addressTrytes)
-	fmt.Printf("%saddress (%d-byte):\t%x\n", indent, len(addressBytes), addressBytes)
 	return nil
 }
 
