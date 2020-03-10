@@ -14,10 +14,13 @@ import (
 )
 
 const (
-	SignatureSize      = ed25519.PublicKeySize + ed25519.SignatureSize
+	// SignatureSize is the size, in bytes, of signatures generated and verified by this package.
+	SignatureSize = ed25519.PublicKeySize + ed25519.SignatureSize
+	// SignatureTryteSize is the size of a signature converted to trytes.
 	SignatureTryteSize = SignatureSize * 2
 )
 
+// Sign signs bundleHash with privateKey and returns a signature.
 func Sign(privateKey ed25519.PrivateKey, bundleHash trinary.Hash) (trinary.Trytes, error) {
 	if err := validHash(bundleHash); err != nil {
 		return "", fmt.Errorf("invalid bundle hash: %w", err)
@@ -35,10 +38,12 @@ func Sign(privateKey ed25519.PrivateKey, bundleHash trinary.Hash) (trinary.Tryte
 	return trinary.Pad(signatureTrytes, consts.SignatureMessageFragmentSizeInTrytes)
 }
 
+// Verify reports whether signatureFragment is a valid signature of bundleHash and belongs to addressTrytes.
 func Verify(addressTrytes trinary.Hash, signatureFragment trinary.Trytes, bundleHash trinary.Hash) (bool, error) {
 	if !guards.IsTrytesOfExactLength(signatureFragment, consts.SignatureMessageFragmentSizeInTrytes) {
 		return false, fmt.Errorf("invalid signature fragment: %w", consts.ErrInvalidTrytes)
 	}
+	// longer signatures must be rejected to prevent signature malleability
 	if len(strings.TrimRight(signatureFragment, "9")) > SignatureTryteSize {
 		return false, nil
 	}

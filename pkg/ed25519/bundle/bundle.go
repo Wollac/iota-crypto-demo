@@ -14,6 +14,7 @@ import (
 	"github.com/wollac/iota-bip39-demo/pkg/ed25519/sign"
 )
 
+// Errors returned during bundle generation.
 var (
 	ErrNoOutput            = errors.New("at least one output required")
 	ErrIntegerOverflow     = errors.New("integer overflow")
@@ -21,9 +22,12 @@ var (
 )
 
 type (
-	Transfer  = bundle.Transfer
+	// Transfer represents the data/value to transfer to an address.
+	Transfer = bundle.Transfer
+	// Transfers are a slice of Transfer.
 	Transfers = bundle.Transfers
 
+	// Input is an address from which to withdraw the a certain value.
 	Input struct {
 		KeyPair ed25519.PrivateKey
 		Value   uint64
@@ -31,6 +35,7 @@ type (
 	}
 )
 
+// ValidateSignatures validates all signatures of the given bundle.
 func ValidateSignatures(txs transaction.Transactions) (bool, error) {
 	for i := range txs {
 		// skip non-inputs
@@ -45,6 +50,7 @@ func ValidateSignatures(txs transaction.Transactions) (bool, error) {
 	return true, nil
 }
 
+// Generate creates a new signed bundle for the given transfers and inputs.
 func Generate(transfers []bundle.Transfer, inputs []Input, txTimestamp uint64) (transaction.Transactions, error) {
 	if len(transfers) < 1 {
 		return nil, ErrNoOutput
@@ -61,9 +67,9 @@ func Generate(transfers []bundle.Transfer, inputs []Input, txTimestamp uint64) (
 		txs = bundle.AddEntry(txs, outEntries[i])
 	}
 
-	var inputIndices []int
-	for _, input := range inputs {
-		inputIndices = append(inputIndices, len(txs))
+	inputIndices := make([]int, len(inputs))
+	for i, input := range inputs {
+		inputIndices[i] = len(txs)
 
 		inAddress, err := address.Generate(input.KeyPair)
 		if err != nil {

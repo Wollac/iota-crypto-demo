@@ -12,13 +12,16 @@ func tryteToTryteValue(t byte) int8 {
 	return trinary.TryteToTryteValueLUT[t-'9']
 }
 
+// BytesToTrytes converts a bit string into its ternary representation encoding one byte a two trytes.
 func BytesToTrytes(bytes []byte) (trinary.Trytes, error) {
-	if err := ValidBytes(bytes); err != nil {
+	if err := ValidBytesForTrytes(bytes); err != nil {
 		return "", err
 	}
 	return MustBytesToTrytes(bytes), nil
 }
 
+// MustBytesToTrytes converts a bit string into its ternary representation encoding one byte a two trytes.
+// The input is not validated before the computation.
 func MustBytesToTrytes(bytes []byte) trinary.Trytes {
 	var trytes strings.Builder
 	trytes.Grow(len(bytes) * 2)
@@ -33,13 +36,15 @@ func MustBytesToTrytes(bytes []byte) trinary.Trytes {
 	return trytes.String()
 }
 
-func ValidBytes(bytes []byte) error {
+// ValidBytesForTrytes checks whether the given slice of bytes is a valid input for BytesToTrytes.
+func ValidBytesForTrytes(bytes []byte) error {
 	if len(bytes) == 0 {
 		return consts.ErrInvalidBytesLength
 	}
 	return nil
 }
 
+// TrytesToBytes the ternary representation of a bit string back to its original slice of bytes.
 func TrytesToBytes(trytes trinary.Trytes) ([]byte, error) {
 	if err := ValidTrytesForBytes(trytes); err != nil {
 		return nil, err
@@ -47,6 +52,8 @@ func TrytesToBytes(trytes trinary.Trytes) ([]byte, error) {
 	return MustTrytesToBytes(trytes), nil
 }
 
+// MustTrytesToBytes the ternary representation of a bit string back to its original slice of bytes.
+// The input is not validated before the computation.
 func MustTrytesToBytes(trytes trinary.Trytes) []byte {
 	trytesLength := len(trytes)
 
@@ -59,6 +66,7 @@ func MustTrytesToBytes(trytes trinary.Trytes) []byte {
 	return bytes
 }
 
+// ValidTrytesForBytes checks whether the given trytes are a valid input for TrytesToBytes.
 func ValidTrytesForBytes(trytes trinary.Trytes) error {
 	tryteLen := len(trytes)
 	if tryteLen < 1 || tryteLen%2 != 0 {

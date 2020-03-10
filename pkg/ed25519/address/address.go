@@ -11,6 +11,8 @@ import (
 	"github.com/iotaledger/iota.go/trinary"
 )
 
+// Generate returns the IOTA address corresponding to the public key contained in the given keyPair.
+// If addChecksum is true, the 9 tryte checksum is added to the address.
 func Generate(keyPair ed25519.PrivateKey, addChecksum ...bool) (trinary.Trytes, error) {
 	if l := len(keyPair); l != ed25519.PrivateKeySize {
 		return "", fmt.Errorf("%w: invalid key length %d", consts.ErrInvalidBytesLength, l)
@@ -19,6 +21,8 @@ func Generate(keyPair ed25519.PrivateKey, addChecksum ...bool) (trinary.Trytes, 
 	return FromPublicKey(publicKey, addChecksum...)
 }
 
+// FromPublicKey returns the IOTA address corresponding to publicKey.
+// If addChecksum is true, the 9 tryte checksum is added to the address.
 func FromPublicKey(publicKey ed25519.PublicKey, addChecksum ...bool) (trinary.Trytes, error) {
 	if l := len(publicKey); l != ed25519.PublicKeySize {
 		return "", fmt.Errorf("%w: invalid key length %d", consts.ErrInvalidBytesLength, l)
