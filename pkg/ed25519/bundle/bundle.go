@@ -148,14 +148,14 @@ func Finalize(txs transaction.Transactions) error {
 }
 
 // Validate checks if a bundle is syntactically valid.
-func Validate(bundle transaction.Transactions) error {
+func Validate(txs transaction.Transactions) error {
 	var totalSum int64
 
 	k := kerl.NewKerl()
 
-	lastIndex := uint64(len(bundle) - 1)
-	for i := range bundle {
-		tx := &bundle[i]
+	lastIndex := uint64(len(txs) - 1)
+	for i := range txs {
+		tx := &txs[i]
 		totalSum += tx.Value
 
 		if tx.CurrentIndex != uint64(i) {
@@ -178,12 +178,12 @@ func Validate(bundle transaction.Transactions) error {
 		return err
 	}
 
-	if bundleHash != bundle[0].Bundle {
+	if bundleHash != txs[0].Bundle {
 		return consts.ErrInvalidBundleHash
 	}
 
 	// validate the signatures
-	valid, err := ValidateSignatures(bundle)
+	valid, err := ValidateSignatures(txs)
 	if err != nil {
 		return err
 	}
