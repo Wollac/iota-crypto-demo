@@ -11,14 +11,14 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/wollac/iota-bip39-demo/pkg/testutil"
+	"github.com/wollac/iota-bip39-demo/internal/hexutil"
 )
 
 type Test struct {
-	Entropy    testutil.HexBytes `json:"entropy"`
-	Mnemonic   Mnemonic          `json:"mnemonic"`
-	Passphrase string            `json:"passphrase"`
-	Seed       testutil.HexBytes `json:"seed"`
+	Entropy    hexutil.Bytes `json:"entropy"`
+	Mnemonic   Mnemonic      `json:"mnemonic"`
+	Passphrase string        `json:"passphrase"`
+	Seed       hexutil.Bytes `json:"seed"`
 }
 
 type TestVector struct {

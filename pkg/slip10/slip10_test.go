@@ -10,20 +10,20 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/wollac/iota-bip39-demo/internal/hexutil"
 	"github.com/wollac/iota-bip39-demo/pkg/bip32path"
-	"github.com/wollac/iota-bip39-demo/pkg/testutil"
 )
 
 type Test struct {
-	Path      bip32path.Path    `json:"chain"`
-	ChainCode testutil.HexBytes `json:"chainCode"`
-	Private   testutil.HexBytes `json:"private"`
-	Public    testutil.HexBytes `json:"public"`
+	Path      bip32path.Path `json:"chain"`
+	ChainCode hexutil.Bytes  `json:"chainCode"`
+	Private   hexutil.Bytes  `json:"private"`
+	Public    hexutil.Bytes  `json:"public"`
 }
 
 type TestVector struct {
-	Seed  testutil.HexBytes `json:"seed"`
-	Tests []Test            `json:"tests"`
+	Seed  hexutil.Bytes `json:"seed"`
+	Tests []Test        `json:"tests"`
 }
 
 func TestSecp256k1(t *testing.T) {
