@@ -1,3 +1,4 @@
+// Package hexutil implements hexadecimal encoding.
 package hexutil
 
 import (

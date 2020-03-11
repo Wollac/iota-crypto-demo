@@ -1,3 +1,4 @@
+// Package wordlist defines the requirements for a word list used for the bip39 package.
 package wordlist
 
 const (

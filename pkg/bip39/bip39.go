@@ -1,3 +1,18 @@
+/*
+Package bip39 implements the BIP-0039 specification of using a mnemonic sentence
+to encode/decode binary entropy and to derive a seed that can then be used to
+generate deterministic wallets.
+
+This package supports entropy lengths from 128 to 512 bits as long as they are a
+multiple of 32 bits.
+
+It comes with the official English and Japanese word list, but different word
+lists can be registered using RegisterWordList as long as they fulfil the
+requirements for a BIP-0039 word list.
+
+This package is tested against the test vectors provided in the official
+BIP-0039 specification.
+*/
 package bip39
 
 import (

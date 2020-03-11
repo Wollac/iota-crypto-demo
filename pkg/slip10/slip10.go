@@ -1,3 +1,22 @@
+/*
+Package slip10 implements the SLIP-0010 private key derivation.
+It only supports the private parent key → private child key derivation for the
+following curves:
+
+	secp256k1 curve
+	NIST P-256 curve
+	ed25519 curve
+
+The public key of an SLIP-0010 extended private key can be computed using
+Curve.PublicKey.
+
+SLIP-0010 provides an extension of BIP-0032. As such, when the secp256k1 curve
+is selected this package is fully compatible to the corresponding derivations
+described in BIP-0032.
+
+This package is tested against the test vectors provided in the official
+SLIP-0010 specification.
+*/
 package slip10
 
 import (

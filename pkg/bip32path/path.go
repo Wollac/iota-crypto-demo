@@ -1,3 +1,14 @@
+/*
+Package bip32path provides utilities for BIP-0032 chains.
+
+These chains define an iterative way to successively derive child keys from the
+extended master key. A BIP-0032 path refers to the shortened notion of such
+derivation and they correspond to a list of child indices where an index >= 2^31
+is used to describe hardened child derivation.
+
+This package supports several of the most commonly used path notation formats.
+See the documentation of ParsePath for more info.
+*/
 package bip32path
 
 import (
