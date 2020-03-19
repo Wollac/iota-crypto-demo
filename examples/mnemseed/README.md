@@ -1,7 +1,7 @@
 Represent 81-tryte legacy IOTA seeds using BIP-39 mnemonics.
 
 ```
-go run examples/seedmnemonic/main.go -language japanese
+go run examples/mnemseed/main.go -language japanese
 
 ==> IOTA Seed Mnemonics
  input seed (81-tryte):         XRUVXMOQVOFJASPMGMKJID9DASLCCIAPLBKFKHWBGXIOCJLLEJUTEEMKZRJDCTRSBTKHMHDNUYDYEYDZZ
