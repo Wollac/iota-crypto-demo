@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/kerl"
@@ -19,6 +20,11 @@ var (
 		"mnemonic",
 		"abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about",
 		"mnemonic sentence according to BIP-39, 12-48 words are supported; if empty a random entropy is generated",
+	)
+	language = flag.String(
+		"language",
+		"english",
+		"language of the mnemonics",
 	)
 	passphrase = flag.String(
 		"passphrase",
@@ -48,6 +54,9 @@ func run() error {
 		mnemonic bip39.Mnemonic
 	)
 
+	if err := bip39.SetWordList(strings.ToLower(*language)); err != nil {
+		return err
+	}
 	if len(*mnemonicString) == 0 {
 		// no mnemonic given, generate
 		entropy, err = generateEntropy(256 / 8 /* 256 bits */)
