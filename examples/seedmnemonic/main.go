@@ -2,14 +2,12 @@ package main
 
 import (
 	"crypto/rand"
-	"errors"
 	"flag"
 	"fmt"
 	"os"
 	"strings"
 
 	"github.com/iotaledger/iota.go/consts"
-	"github.com/iotaledger/iota.go/guards"
 	"github.com/iotaledger/iota.go/kerl"
 	"github.com/iotaledger/iota.go/trinary"
 	"github.com/wollac/iota-bip39-demo/pkg/bip39"
@@ -107,13 +105,16 @@ func generateSeed() (trinary.Hash, error) {
 }
 
 func validateSeed(seed trinary.Hash) error {
-	if !guards.IsTrytesOfExactLength(seed, consts.HashTrytesSize) {
-		return errors.New("invalid trytes")
+	if len(seed) != consts.HashTrytesSize {
+		return consts.ErrInvalidTrytesLength
 	}
-	// last trit must be zero to fit into 48 bytes
+	if err := trinary.ValidTrytes(seed); err != nil {
+		return err
+	}
+	// a valid hash must have the last trit set to zero
 	lastTrits := trinary.MustTrytesToTrits(string(seed[consts.HashTrytesSize-1]))
 	if lastTrits[consts.TritsPerTryte-1] != 0 {
-		return errors.New("last trit not zero")
+		return consts.ErrInvalidHash
 	}
 	return nil
 }
