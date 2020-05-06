@@ -16,7 +16,7 @@ Run the example with `go run examples/ed25519/main.go` and use `-help` to see th
 - `kdf` shows the private and public key derivation using SLIP-0010 and BIP-0039 mnemonics + passphrase.<br>
 It performs the legacy IOTA seed derivation (as implemented in the Ledger App) based on BIP-0032 and the Ed25519 key derivation following SLIP-0010.
 Run with `go run examples/kdf/main.go` and use `-help` to see the available command-line flags.
+- `merkle` prints the Merkle tree of several random transaction hashes on the console.
+Run with `go run examples/merkle/main.go` and use `-help` to see the available command-line flags.
 - `mnemseed` presents the extention of BIP-0039 to decode and encode 81-tryte legacy IOTA seeds using mnemonics.
 Run with `go run examples/mnemseed/main.go` and use `-help` to see the available command-line flags.
-- `merkle` prints the Merkle tree of several random bundle hashes on the console.
-Run with `go run examples/merkle/main.go` and use `-help` to see the available command-line flags.

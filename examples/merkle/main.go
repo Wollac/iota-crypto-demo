@@ -8,8 +8,6 @@ import (
 	"strings"
 
 	"github.com/iotaledger/iota.go/consts"
-	"github.com/iotaledger/iota.go/kerl"
-	"github.com/iotaledger/iota.go/signing"
 	"github.com/iotaledger/iota.go/trinary"
 	"github.com/wollac/iota-bip39-demo/internal/byteconv"
 	"github.com/wollac/iota-bip39-demo/pkg/merkle"
@@ -28,10 +26,10 @@ func main() {
 
 	var hashes []trinary.Hash
 	for i := 0; i < *numHashes; i++ {
-		hashes = append(hashes, randomBundleHash())
+		hashes = append(hashes, randomTrytes(consts.HashTrytesSize))
 	}
 
-	fmt.Println("==> input bundle hashes")
+	fmt.Println("==> input tx hashes")
 	for i := range hashes {
 		fmt.Printf(" d[%d]: %s\n", i, hashes[i])
 	}
@@ -39,18 +37,13 @@ func main() {
 	printTree(merkle.DefaultHasher, hashes)
 }
 
-// randomBundleHash returns a random bundle hash.
-func randomBundleHash() trinary.Hash {
-	buffer := make([]byte, consts.HashBytesSize)
-compute:
-	rand.Read(buffer)
-	hash, _ := kerl.KerlBytesToTrytes(buffer)
-	for _, v := range signing.NormalizedBundleHash(hash) {
-		if v == consts.MaxTryteValue {
-			goto compute
-		}
+func randomTrytes(n int) trinary.Hash {
+	var trytes strings.Builder
+	trytes.Grow(n)
+	for i := 0; i < n; i++ {
+		trytes.WriteByte(consts.TryteAlphabet[rand.Intn(len(consts.TryteAlphabet))])
 	}
-	return hash
+	return trytes.String()
 }
 
 // printTree pretty prints the Merkle tree.
@@ -71,7 +64,7 @@ func buildTree(h *merkle.Hasher, hashes []trinary.Hash) *node {
 		return &node{text: fmt.Sprintf(" %x", h.EmptyRoot())}
 	}
 	if len(hashes) == 1 {
-		return &node{text: fmt.Sprintf(" ┌ bundle hash: %s\n─┴ leaf: %x", hashes[0], h.HashLeaf(hashes[0]))}
+		return &node{text: fmt.Sprintf(" ┌ tx hash: %s\n─┴ leaf: %x", hashes[0], h.HashLeaf(hashes[0]))}
 	}
 	// largest power of two less than n, i.e. k < n <= 2k
 	k := 1 << (bits.Len(uint(len(hashes)-1)) - 1)
