@@ -9,8 +9,8 @@ import (
 	"github.com/iotaledger/iota.go/guards"
 	"github.com/iotaledger/iota.go/kerl"
 	"github.com/iotaledger/iota.go/trinary"
+	"github.com/wollac/iota-bip39-demo/internal/byteconv"
 	"github.com/wollac/iota-bip39-demo/pkg/ed25519/address"
-	"github.com/wollac/iota-bip39-demo/pkg/ed25519/byteconv"
 )
 
 const (
