@@ -67,6 +67,9 @@ type node struct {
 }
 
 func buildTree(h *merkle.Hasher, hashes []trinary.Hash) *node {
+	if len(hashes) == 0 {
+		return &node{text: fmt.Sprintf(" %x", h.EmptyRoot())}
+	}
 	if len(hashes) == 1 {
 		return &node{text: fmt.Sprintf(" ┌ bundle hash: %s\n─┴ leaf: %x", hashes[0], h.HashLeaf(hashes[0]))}
 	}
