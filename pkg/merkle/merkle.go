@@ -25,7 +25,7 @@ type Hasher struct {
 	crypto.Hash
 }
 
-// New creates a new Hashers.LogHasher on the passed in hash function.
+// New creates a new Hashers based on the passed in hash function.
 func New(h crypto.Hash) *Hasher {
 	return &Hasher{Hash: h}
 }
@@ -35,20 +35,20 @@ func (t *Hasher) EmptyRoot() []byte {
 	return t.New().Sum(nil)
 }
 
-// TreeHash computes the Merkle tree hash of the provided hashes.
-func (t *Hasher) TreeHash(bundleHashes []trinary.Hash) []byte {
-	if len(bundleHashes) == 0 {
+// TreeHash computes the Merkle tree hash of the provided ternary hashes.
+func (t *Hasher) TreeHash(hashes []trinary.Hash) []byte {
+	if len(hashes) == 0 {
 		return t.EmptyRoot()
 	}
-	if len(bundleHashes) == 1 {
-		return t.HashLeaf(bundleHashes[0])
+	if len(hashes) == 1 {
+		return t.HashLeaf(hashes[0])
 	}
 
-	k := largestPowerOfTwo(len(bundleHashes))
-	return t.HashNode(t.TreeHash(bundleHashes[:k]), t.TreeHash(bundleHashes[k:]))
+	k := largestPowerOfTwo(len(hashes))
+	return t.HashNode(t.TreeHash(hashes[:k]), t.TreeHash(hashes[k:]))
 }
 
-// HashLeaf returns the Merkle tree leaf hash of the input hash.
+// HashLeaf returns the Merkle tree leaf hash of the provided ternary hash.
 func (t *Hasher) HashLeaf(hash trinary.Hash) []byte {
 	h := t.New()
 	h.Write([]byte{LeafHashPrefix})
