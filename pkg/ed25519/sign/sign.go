@@ -9,8 +9,8 @@ import (
 	"github.com/iotaledger/iota.go/guards"
 	"github.com/iotaledger/iota.go/kerl"
 	"github.com/iotaledger/iota.go/trinary"
-	"github.com/wollac/iota-bip39-demo/internal/byteconv"
 	"github.com/wollac/iota-bip39-demo/pkg/ed25519/address"
+	encoding "github.com/wollac/iota-bip39-demo/pkg/encoding/ternary"
 )
 
 const (
@@ -34,7 +34,7 @@ func Sign(privateKey ed25519.PrivateKey, bundleHash trinary.Hash) (trinary.Tryte
 	copy(signatureBytes, privateKey.Public().(ed25519.PublicKey))
 	copy(signatureBytes[ed25519.PublicKeySize:], ed25519.Sign(privateKey, hashBytes))
 
-	signatureTrytes := byteconv.MustBytesToTrytes(signatureBytes)
+	signatureTrytes := encoding.MustBytesToTrytes(signatureBytes)
 	return trinary.Pad(signatureTrytes, consts.SignatureMessageFragmentSizeInTrytes)
 }
 
@@ -48,7 +48,7 @@ func Verify(addressTrytes trinary.Hash, signatureFragment trinary.Trytes, bundle
 		return false, nil
 	}
 
-	signatureBytes, err := byteconv.TrytesToBytes(signatureFragment[:SignatureTryteSize])
+	signatureBytes, err := encoding.TrytesToBytes(signatureFragment[:SignatureTryteSize])
 	if err != nil {
 		return false, fmt.Errorf("invalid signature fragment: %w", err)
 	}

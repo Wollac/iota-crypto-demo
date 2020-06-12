@@ -1,4 +1,5 @@
-package byteconv
+// Package ternary implements ternary encoding as specified by the IOTA Protocol RFC-0015.
+package ternary
 
 import (
 	"fmt"

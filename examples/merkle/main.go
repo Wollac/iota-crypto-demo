@@ -9,7 +9,7 @@ import (
 
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/trinary"
-	"github.com/wollac/iota-bip39-demo/internal/byteconv"
+	encoding "github.com/wollac/iota-bip39-demo/pkg/encoding/ternary"
 	"github.com/wollac/iota-bip39-demo/pkg/merkle"
 )
 
@@ -49,7 +49,7 @@ func randomTrytes(n int) trinary.Hash {
 // printTree pretty prints the Merkle tree.
 func printTree(h *merkle.Hasher, hashes []trinary.Hash) {
 	root := h.TreeHash(hashes)
-	fmt.Printf(" Htri: %s\n root: %x\n", byteconv.MustBytesToTrytes(root), root)
+	fmt.Printf(" Htri: %s\n root: %x\n", encoding.MustBytesToTrytes(root), root)
 	printNode(buildTree(h, hashes), "")
 
 }

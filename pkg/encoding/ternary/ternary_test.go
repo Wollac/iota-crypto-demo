@@ -1,4 +1,4 @@
-package byteconv
+package ternary
 
 import (
 	"bytes"
