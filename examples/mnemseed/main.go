@@ -11,7 +11,6 @@ import (
 	"github.com/iotaledger/iota.go/kerl"
 	"github.com/iotaledger/iota.go/trinary"
 	"github.com/wollac/iota-bip39-demo/pkg/bip39"
-	"golang.org/x/crypto/sha3"
 )
 
 var (
@@ -30,7 +29,6 @@ var (
 func main() {
 	flag.Parse()
 
-	sha3.New384()
 	if err := run(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %s\n", err)
 		os.Exit(1)

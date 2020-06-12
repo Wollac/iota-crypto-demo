@@ -27,8 +27,9 @@ func MustBytesToTrytes(bytes []byte) trinary.Trytes {
 	trytes.Grow(len(bytes) * 2)
 
 	for i := range bytes {
-		// convert to un-balanced ternary first
-		v := int(int8(bytes[i])) + (consts.TryteRadix/2)*consts.TryteRadix + consts.TryteRadix/2
+		// convert the signed byte value to two trytes.
+		// this is equivalent to: IntToTrytes(int8(bytes[i]), 2)
+		v := int(int8(bytes[i])) + (consts.TryteRadix/2)*consts.TryteRadix + consts.TryteRadix/2 // make un-balanced
 		quo, rem := v/consts.TryteRadix, v%consts.TryteRadix
 		trytes.WriteByte(trinary.TryteValueToTyteLUT[rem])
 		trytes.WriteByte(trinary.TryteValueToTyteLUT[quo])
@@ -77,6 +78,7 @@ func ValidTrytesForBytes(trytes trinary.Trytes) error {
 	}
 	for i := 0; i < tryteLen; i += 2 {
 		v := int(tryteToTryteValue(trytes[i])) + int(tryteToTryteValue(trytes[i+1]))*consts.TryteRadix
+		// the value must fit into an int8, i.e. -128 <= v <= 127
 		if int(int8(v)) != v {
 			return fmt.Errorf("%w: at index %d (trytes: %s)", consts.ErrInvalidTrytes, i, trytes[i:i+2])
 		}
