@@ -1,4 +1,4 @@
-Print the Merkle tree of several random transaction hashes on the console.
+Print the Merkle tree (as described in the IOTA protocol RFC-0012) of several random transaction hashes on the console.
 
 ```
 go run examples/merkle/main.go -hashes 7

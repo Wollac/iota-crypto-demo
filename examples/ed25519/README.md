@@ -1,4 +1,4 @@
-Create bundles using the Ed25519 signature scheme as described in RFC-0009.
+Create bundles using the Ed25519 signature scheme as described in the IOTA protocol RFC-0009.
 
 ```
 go run examples/ed25519/main.go -inputs 2 -timestamp 0
