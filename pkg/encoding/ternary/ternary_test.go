@@ -3,6 +3,7 @@ package ternary
 import (
 	"bytes"
 	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"strings"
@@ -19,14 +20,16 @@ var bytesToTryteTest = []*struct {
 	expErr    error
 }{
 	{nil, "", consts.ErrInvalidBytesLength},
-	{[]byte{0}, "99", nil},
 	{[]byte{1}, "A9", nil},
 	{[]byte{127}, "SE", nil},
 	{[]byte{128}, "GV", nil},
 	{[]byte{255}, "Z9", nil},
-	{[]byte{0, 1}, "99A9", nil}, // endianness
-	{[]byte{0, 1, 2, 126, 127, 128, 129, 253, 254, 255}, "99A9B9RESEGVHVX9Y9Z9", nil}, // RFC example
-	{bytes.Repeat([]byte{0, 1}, 25), strings.Repeat("99A9", 25), nil},                 // long
+	{[]byte{0, 1}, "99A9", nil},                                       // endianness
+	{bytes.Repeat([]byte{0, 1}, 25), strings.Repeat("99A9", 25), nil}, // long
+	// RFC examples
+	{decodeHex("00"), "99", nil},
+	{decodeHex("0001027e7f8081fdfeff"), "99A9B9RESEGVHVX9Y9Z9", nil},
+	{decodeHex("9ba06c78552776a596dfe360cc2b5bf644c0f9d343a10e2e71debecd30730d03"), "GWLW9DLDDCLAJDQXBWUZYZODBYPBJCQ9NCQYT9IYMBMWNASBEDTZOYCYUBGDM9C9", nil},
 }
 
 func TestBytesToTrytes(t *testing.T) {
@@ -64,14 +67,16 @@ var trytesToBytesTests = []*struct {
 	{"NN", nil, consts.ErrInvalidTrytes}, // not a byte
 	{"LI", nil, consts.ErrInvalidTrytes}, // not a byte
 	{"22", nil, consts.ErrInvalidTrytes}, // not a tryte
-	{"99", []byte{0}, nil},
 	{"A9", []byte{1}, nil},
 	{"SE", []byte{127}, nil},
 	{"GV", []byte{128}, nil},
 	{"Z9", []byte{255}, nil},
-	{"99A9", []byte{0, 1}, nil}, // endianness
-	{"99A9B9RESEGVHVX9Y9Z9", []byte{0, 1, 2, 126, 127, 128, 129, 253, 254, 255}, nil}, // RFC example
-	{strings.Repeat("99A9", 25), bytes.Repeat([]byte{0, 1}, 25), nil},                 // long
+	{"99A9", []byte{0, 1}, nil},                                       // endianness
+	{strings.Repeat("99A9", 25), bytes.Repeat([]byte{0, 1}, 25), nil}, // long
+	// RFC examples
+	{"99", decodeHex("00"), nil},
+	{"99A9B9RESEGVHVX9Y9Z9", decodeHex("0001027e7f8081fdfeff"), nil},
+	{"GWLW9DLDDCLAJDQXBWUZYZODBYPBJCQ9NCQYT9IYMBMWNASBEDTZOYCYUBGDM9C9", decodeHex("9ba06c78552776a596dfe360cc2b5bf644c0f9d343a10e2e71debecd30730d03"), nil},
 }
 
 func TestTrytesToBytes(t *testing.T) {
@@ -125,4 +130,12 @@ func BenchmarkTrytesToBytes(b *testing.B) {
 	for i := range data {
 		_ = MustTrytesToBytes(data[i])
 	}
+}
+
+func decodeHex(s string) []byte {
+	dst, err := hex.DecodeString(s)
+	if err != nil {
+		panic(err)
+	}
+	return dst
 }
