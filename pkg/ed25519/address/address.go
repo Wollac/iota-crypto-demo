@@ -40,7 +40,7 @@ func FromPublicKey(publicKey ed25519.PublicKey, addChecksum ...bool) (trinary.Tr
 }
 
 func sumLegacyKeccak384(data []byte) []byte {
-	h := sha3.New384()
+	h := sha3.NewLegacyKeccak384()
 	if _, err := h.Write(data); err != nil {
 		panic(err)
 	}
