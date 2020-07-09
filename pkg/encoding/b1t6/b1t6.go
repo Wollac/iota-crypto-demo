@@ -22,7 +22,7 @@ func Encode(src []byte) trinary.Trits {
 // EncodeToTrytes encodes src into trytes.
 func EncodeToTrytes(src []byte) trinary.Trytes {
 	var dst strings.Builder
-	dst.Grow(len(src) * 2)
+	dst.Grow(EncodedLen(len(src)) / consts.TritsPerTryte)
 
 	for i := range src {
 		// convert the signed byte value to two dst.
@@ -54,7 +54,7 @@ func DecodeTrytes(src trinary.Trytes) ([]byte, error) {
 	if len(src)%2 != 0 {
 		return nil, fmt.Errorf("%w: length must be even", consts.ErrInvalidTrytesLength)
 	}
-	dst := make([]byte, len(src)/2)
+	dst := make([]byte, DecodedLen(len(src)*consts.TritsPerTryte))
 	for i := 1; i < len(src); i += 2 {
 		a, ok := tryteToTryteValue(src[i-1])
 		if !ok {

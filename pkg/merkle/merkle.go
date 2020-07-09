@@ -53,11 +53,7 @@ func (t *Hasher) TreeHash(hashes []trinary.Hash) []byte {
 func (t *Hasher) HashLeaf(hash trinary.Hash) []byte {
 	h := t.New()
 	h.Write([]byte{LeafHashPrefix})
-	bytes, err := t5b1.EncodeTrytes(trinary.MustPad(hash, 82))
-	if err != nil {
-		panic(err)
-	}
-	h.Write(bytes)
+	h.Write(t5b1.Encode(trinary.MustTrytesToTrits(hash)))
 	return h.Sum(nil)
 }
 

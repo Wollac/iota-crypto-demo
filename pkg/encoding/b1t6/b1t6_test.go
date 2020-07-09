@@ -14,36 +14,33 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestEncode(t *testing.T) {
+func TestEncodeToTrytes(t *testing.T) {
 	var test = []*struct {
 		bytes     []byte
 		expTrytes trinary.Trytes
-		expErr    error
 	}{
-		{[]byte{}, "", nil},
-		{[]byte{1}, "A9", nil},
-		{[]byte{127}, "SE", nil},
-		{[]byte{128}, "GV", nil},
-		{[]byte{255}, "Z9", nil},
-		{[]byte{0, 1}, "99A9", nil}, // endianness
-		{bytes.Repeat([]byte{0, 1}, 25), strings.Repeat("99A9", 25), nil}, // long
+		{[]byte{}, ""},
+		{[]byte{1}, "A9"},
+		{[]byte{127}, "SE"},
+		{[]byte{128}, "GV"},
+		{[]byte{255}, "Z9"},
+		{[]byte{0, 1}, "99A9"}, // endianness
+		{bytes.Repeat([]byte{0, 1}, 25), strings.Repeat("99A9", 25)}, // long
 		// RFC examples
-		{decodeHex("00"), "99", nil},
-		{decodeHex("0001027e7f8081fdfeff"), "99A9B9RESEGVHVX9Y9Z9", nil},
-		{decodeHex("9ba06c78552776a596dfe360cc2b5bf644c0f9d343a10e2e71debecd30730d03"), "GWLW9DLDDCLAJDQXBWUZYZODBYPBJCQ9NCQYT9IYMBMWNASBEDTZOYCYUBGDM9C9", nil},
+		{decodeHex("00"), "99"},
+		{decodeHex("0001027e7f8081fdfeff"), "99A9B9RESEGVHVX9Y9Z9"},
+		{decodeHex("9ba06c78552776a596dfe360cc2b5bf644c0f9d343a10e2e71debecd30730d03"), "GWLW9DLDDCLAJDQXBWUZYZODBYPBJCQ9NCQYT9IYMBMWNASBEDTZOYCYUBGDM9C9"},
 	}
 
 	for _, tt := range test {
 		t.Run(fmt.Sprintf("%x", tt.bytes), func(t *testing.T) {
-			if tt.expErr == nil {
-				trytes := EncodeToTrytes(tt.bytes)
-				assert.Equal(t, tt.expTrytes, trytes)
-			}
+			trytes := EncodeToTrytes(tt.bytes)
+			assert.Equal(t, tt.expTrytes, trytes)
 		})
 	}
 }
 
-func TestDecode(t *testing.T) {
+func TestDecodeTrytes(t *testing.T) {
 	var tests = []*struct {
 		trytes   trinary.Trytes
 		expBytes []byte
