@@ -11,13 +11,16 @@ import (
 )
 
 // EncodedLen returns the length of an encoding of n source bytes.
-// Specifically, it returns n * 2.
-func EncodedLen(n int) int { return n * 2 }
+func EncodedLen(n int) int { return n * 6 }
 
-// Encode encodes src into EncodedLen(len(src)) trytes.
-// Encode implements the b1t6 encoding converting a bit string into its ternary
-// representation by representing one byte as two trytes.
-func Encode(src []byte) trinary.Trytes {
+// Encode encodes src into EncodedLen(len(src)) trits.
+// Encode implements the b1t6 encoding converting a bit string into ternary.
+func Encode(src []byte) trinary.Trits {
+	return trinary.MustTrytesToTrits(EncodeToTrytes(src))
+}
+
+// EncodeToTrytes encodes src into trytes.
+func EncodeToTrytes(src []byte) trinary.Trytes {
 	var dst strings.Builder
 	dst.Grow(len(src) * 2)
 
@@ -32,14 +35,22 @@ func Encode(src []byte) trinary.Trytes {
 	return dst.String()
 }
 
-// DecodedLen returns the length of a decoding of n source trytes.
-// Specifically, it returns n / 2.
-func DecodedLen(n int) int { return n / 2 }
+// DecodedLen returns the length of a decoding of n source trits.
+func DecodedLen(n int) int { return n / 6 }
 
 // Decode decodes src into DecodedLen(len(src)) bytes.
-// Decode expects that src contains a valid b1t6 encoding and that src has even length.
-// If the input is malformed, Decode returns an error.
-func Decode(src trinary.Trytes) ([]byte, error) {
+// Decode expects that src contains a valid b1t6 encoding and that src has a length that is a multiple of 6.
+// If the input is malformed, DecodeTrytes returns an error.
+func Decode(src trinary.Trits) ([]byte, error) {
+	if len(src)%6 != 0 {
+		return nil, fmt.Errorf("%w: length must be a multiple of 6", consts.ErrInvalidTritsLength)
+	}
+	return DecodeTrytes(trinary.MustTritsToTrytes(src))
+}
+
+// DecodeTrytes returns the bytes represented by the t6b1 encoded trytes.
+// If the input is malformed, DecodeTrytes returns an error.
+func DecodeTrytes(src trinary.Trytes) ([]byte, error) {
 	if len(src)%2 != 0 {
 		return nil, fmt.Errorf("%w: length must be even", consts.ErrInvalidTrytesLength)
 	}

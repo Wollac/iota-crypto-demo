@@ -34,7 +34,7 @@ func Sign(privateKey ed25519.PrivateKey, bundleHash trinary.Hash) (trinary.Tryte
 	copy(signatureBytes, privateKey.Public().(ed25519.PublicKey))
 	copy(signatureBytes[ed25519.PublicKeySize:], ed25519.Sign(privateKey, hashBytes))
 
-	signatureTrytes := b1t6.Encode(signatureBytes)
+	signatureTrytes := b1t6.EncodeToTrytes(signatureBytes)
 	return trinary.Pad(signatureTrytes, consts.SignatureMessageFragmentSizeInTrytes)
 }
 
@@ -48,7 +48,7 @@ func Verify(addressTrytes trinary.Hash, signatureFragment trinary.Trytes, bundle
 		return false, nil
 	}
 
-	signatureBytes, err := b1t6.Decode(signatureFragment[:SignatureTryteSize])
+	signatureBytes, err := b1t6.DecodeTrytes(signatureFragment[:SignatureTryteSize])
 	if err != nil {
 		return false, fmt.Errorf("invalid signature fragment: %w", err)
 	}

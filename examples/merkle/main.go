@@ -49,7 +49,7 @@ func randomTrytes(n int) trinary.Hash {
 // printTree pretty prints the Merkle tree.
 func printTree(h *merkle.Hasher, hashes []trinary.Hash) {
 	root := h.TreeHash(hashes)
-	fmt.Printf(" Htri: %s\n root: %x\n", b1t6.Encode(root), root)
+	fmt.Printf(" Htri: %s\n root: %x\n", b1t6.EncodeToTrytes(root), root)
 	printNode(buildTree(h, hashes), "")
 
 }

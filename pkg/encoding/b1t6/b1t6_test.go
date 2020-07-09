@@ -36,7 +36,7 @@ func TestEncode(t *testing.T) {
 	for _, tt := range test {
 		t.Run(fmt.Sprintf("%x", tt.bytes), func(t *testing.T) {
 			if tt.expErr == nil {
-				trytes := Encode(tt.bytes)
+				trytes := EncodeToTrytes(tt.bytes)
 				assert.Equal(t, tt.expTrytes, trytes)
 			}
 		})
@@ -71,7 +71,7 @@ func TestDecode(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.trytes, func(t *testing.T) {
-			bs, err := Decode(tt.trytes)
+			bs, err := DecodeTrytes(tt.trytes)
 			if assert.Truef(t, errors.Is(err, tt.expErr), "unexpected error: %v", err) {
 				assert.Equal(t, tt.expBytes, bs)
 			}
@@ -90,7 +90,7 @@ func BenchmarkEncode(b *testing.B) {
 	b.ResetTimer()
 
 	for i := range data {
-		_ = Encode(data[i])
+		_ = EncodeToTrytes(data[i])
 	}
 }
 
@@ -101,12 +101,12 @@ func BenchmarkDecode(b *testing.B) {
 		if _, err := rand.Read(tmp); err != nil {
 			b.Fatal(err)
 		}
-		data[i] = Encode(tmp)
+		data[i] = EncodeToTrytes(tmp)
 	}
 	b.ResetTimer()
 
 	for i := range data {
-		_, _ = Decode(data[i])
+		_, _ = DecodeTrytes(data[i])
 	}
 }
 

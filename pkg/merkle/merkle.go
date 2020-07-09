@@ -8,6 +8,7 @@ import (
 	"math/bits"
 
 	"github.com/iotaledger/iota.go/trinary"
+	"github.com/wollac/iota-bip39-demo/pkg/encoding/t5b1"
 	_ "golang.org/x/crypto/blake2b" // BLAKE2b_512 is the default hashing algorithm
 )
 
@@ -52,7 +53,11 @@ func (t *Hasher) TreeHash(hashes []trinary.Hash) []byte {
 func (t *Hasher) HashLeaf(hash trinary.Hash) []byte {
 	h := t.New()
 	h.Write([]byte{LeafHashPrefix})
-	h.Write(trinary.MustTrytesToBytes(hash))
+	bytes, err := t5b1.EncodeTrytes(trinary.MustPad(hash, 82))
+	if err != nil {
+		panic(err)
+	}
+	h.Write(bytes)
 	return h.Sum(nil)
 }
 
