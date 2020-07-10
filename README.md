@@ -3,6 +3,7 @@ This repository contains Go example implementations related to the cryptography 
 
 ## Packages
 It contains the following general packages:
+- `bech32` implements the bech32-based address format. 
 - `bip32path` provides utilities for [BIP-0032](https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki) chains.
 - `bip39` implements the [BIP-0039](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) specification and mnemonic [word lists](https://github.com/bitcoin/bips/blob/master/bip-0039/bip-0039-wordlists.md).
 - `ed25519` provides utilities to generate and verify transaction bundles using the [Ed25519](https://ed25519.cr.yp.to/) signature scheme as described in the IOTA protocol [RFC-0009 draft](https://github.com/iotaledger/protocol-rfcs/pull/9).
@@ -13,6 +14,8 @@ It contains the following general packages:
 All these packages are tested against the full test vectors provided in the corresponding specifications.
 
 ## Examples
+- `bech32` encode and decode bech32 addresses from WOTS and Ed25519 hashes.<br>
+Run the example with `go run examples/bech32/main.go` and use `-help` to see the available commands.
 - `ed25519` creates bundles using the Ed25519 signature scheme with varying number of input transactions and one output transaction.<br>
 Run the example with `go run examples/ed25519/main.go` and use `-help` to see the available command-line flags.
 - `kdf` shows the private and public key derivation using SLIP-0010 and BIP-0039 mnemonics + passphrase.<br>
