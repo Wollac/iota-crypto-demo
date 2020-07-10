@@ -8,7 +8,7 @@ It contains the following general packages:
 - `ed25519` provides utilities to generate and verify transaction bundles using the [Ed25519](https://ed25519.cr.yp.to/) signature scheme as described in the IOTA protocol [RFC-0009 draft](https://github.com/iotaledger/protocol-rfcs/pull/9).
 - `merkle` implements the combination of multiple bundle hashes into one Merkle tree as described in the IOTA protocol [RFC-0012 draft](https://github.com/iotaledger/protocol-rfcs/pull/12).
 - `slip10` implements the [SLIP-0010](https://github.com/satoshilabs/slips/blob/master/slip-0010.md) private key derivation.
-- `encoding/ternary` implements the binary-to-ternary encoding as described in the IOTA protocol [RFC-0015 draft](https://github.com/iotaledger/protocol-rfcs/pull/15).
+- `encoding/b1t6` implements the binary-to-ternary encoding as described in the IOTA protocol [RFC-0015](https://github.com/iotaledger/protocol-rfcs/blob/master/text/0015-binary-to-ternary-encoding/0015-binary-to-ternary-encoding.md).
 
 All these packages are tested against the full test vectors provided in the corresponding specifications.
 
