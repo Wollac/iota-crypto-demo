@@ -2,13 +2,18 @@
 package t5b1
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/trinary"
 )
 
-const tritsPerByte = 5
+const (
+	tritsPerByte  = 5
+	maxGroupValue = 1 + 3 + 9 + 27 + 81
+	minGroupValue = -maxGroupValue
+)
 
 // lookup table to unpack a byte into 5 trits.
 var tritsLUT = [256][tritsPerByte]int8{
@@ -57,7 +62,7 @@ var tritsLUT = [256][tritsPerByte]int8{
 	{-1, -1, 0, 0, 0}, {0, -1, 0, 0, 0}, {1, -1, 0, 0, 0}, {-1, 0, 0, 0, 0},
 }
 
-// EncodedLen returns the length of an encoding of n source bytes.
+// EncodedLen returns the byte-length of an encoding of n source trits.
 func EncodedLen(n int) int { return (n + tritsPerByte - 1) / tritsPerByte }
 
 // Encode encodes src into EncodedLen(len(src)) bytes.
@@ -67,6 +72,7 @@ func Encode(src trinary.Trits) []byte {
 	dst := make([]byte, EncodedLen(len(src)))
 	for i := range dst {
 		tmp := src[i*tritsPerByte:]
+		// incomplete group
 		if len(tmp) < tritsPerByte {
 			var v int
 			for j := len(tmp) - 1; j >= 0; j-- {
@@ -82,15 +88,25 @@ func Encode(src trinary.Trits) []byte {
 	return dst
 }
 
-// DecodedLen returns the length of a decoding of n source trits.
+// EncodeToTrytes encodes src into bytes.
+// If the corresponding number of trits of src is not a multiple of 5, it is padded with zeroes.
+func EncodeTrytes(src trinary.Trytes) []byte {
+	return Encode(trinary.MustTrytesToTrits(src))
+}
+
+// ErrNonZeroPadding reports an attempt to decode an input without zero padding.
+var ErrNonZeroPadding = errors.New("non-zero padding")
+
+// DecodedLen returns the trit-length of a decoding of n source bytes.
 func DecodedLen(n int) int { return n * tritsPerByte }
 
 // Decode decodes src into DecodedLen(len(src)) trits.
-// If src does not contain a valid t5b1 encoding, an error is returned.
+// Decode expects that src contains a valid t5b1 encoding.
+// If the input is malformed, Decode returns an error.
 func Decode(src []byte) (trinary.Trits, error) {
 	dst := make(trinary.Trits, DecodedLen(len(src)))
 	for i, b := range src {
-		if int8(b) < -121 || int8(b) > 121 {
+		if int8(b) < minGroupValue || int8(b) > maxGroupValue {
 			return nil, fmt.Errorf("%w: at index %d (byte: %x)", consts.ErrInvalidByte, i, b)
 		}
 		// bounds check hints to compiler
@@ -103,4 +119,36 @@ func Decode(src []byte) (trinary.Trits, error) {
 		tmp[4] = tritsLUT[b][4]
 	}
 	return dst, nil
+}
+
+// DecodeToTrytes decodes src into trytes.
+// DecodeToTrytes expects that src contains a valid t5b1 encoding of a tryte-string.
+// If the input is malformed or does not contain the correct zero padding, it returns an error.
+func DecodeToTrytes(src []byte) (trinary.Trytes, error) {
+	trits, err := Decode(src)
+	if err != nil {
+		return "", err
+	}
+	padLength := len(trits) % consts.TritsPerTryte
+	if padLength == 0 {
+		return trinary.MustTritsToTrytes(trits), nil
+	}
+	if !hasTrailingZeros(trits, padLength) {
+		return "", ErrNonZeroPadding
+	}
+	return trinary.MustTritsToTrytes(trits[:len(trits)-padLength]), nil
+}
+
+// returns true if trits has at least n trailing zeroes
+func hasTrailingZeros(trits trinary.Trits, n int) bool {
+	i := len(trits) - n
+	if i < 0 {
+		return false
+	}
+	for ; i < len(trits); i++ {
+		if trits[i] != 0 {
+			return false
+		}
+	}
+	return true
 }

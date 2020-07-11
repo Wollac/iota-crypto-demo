@@ -10,14 +10,25 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestTrits(t *testing.T) {
-	for i := 0; i < 1000; i++ {
-		test := randomTrits(consts.TransactionTrinarySize)
+func TestRoundTrip(t *testing.T) {
+	for i := 0; i < 100; i++ {
+		src := randomTrits(consts.TransactionTrinarySize)
 
-		bytes := Encode(test)
-		trits, err := Decode(bytes)
+		bytes := Encode(src)
+		dst, err := Decode(bytes)
 		require.NoError(t, err)
-		require.Equal(t, test, trits[:consts.TransactionTrinarySize])
+		require.Equal(t, src, dst[:consts.TransactionTrinarySize])
+	}
+}
+
+func TestRoundTripTrytes(t *testing.T) {
+	for i := 0; i < 100; i++ {
+		src := randomTrytes(consts.TransactionTrytesSize)
+
+		bytes := EncodeTrytes(src)
+		dst, err := DecodeToTrytes(bytes)
+		require.NoError(t, err)
+		require.Equal(t, src, dst)
 	}
 }
 

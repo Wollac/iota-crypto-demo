@@ -32,23 +32,12 @@ var (
 )
 
 var (
-	prefix       = "iota"
-	encodeTrytes = kerl.KerlTrytesToBytes
-	//encodeTrytes = func(hash trinary.Hash) ([]byte, error) {
-	//	trits, err := trinary.TrytesToTrits(hash)
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//	return t5b1.Encode(trits), nil
-	//}
+	prefix = "iota"
+
 	decodeTrytes = kerl.KerlBytesToTrytes
-	//decodeTrytes = func(bytes []byte) (trinary.Trytes, error) {
-	//	trits, err := t5b1.Decode(bytes)
-	//	if err != nil {
-	//		return "", err
-	//	}
-	//	return trinary.MustTritsToTrytes(trits[:243]), nil
-	//}
+	encodeTrytes = kerl.KerlTrytesToBytes
+	//encodeTrytes = func(src trinary.Hash) ([]byte, error) { return t5b1.EncodeTrytes(src), nil }
+	//decodeTrytes = t5b1.DecodeToTrytes
 )
 
 func main() {
@@ -121,7 +110,7 @@ func runEncode(arguments []string) error {
 	fmt.Printf("  hash (%d-char):\t%s\n", len(*hash), *hash)
 	fmt.Printf("  network (%d-byte):\t%s\n", len(prefix), prefix)
 	fmt.Printf("  version (1-byte):\t%s\n", version)
-	fmt.Printf("  address (%d-byte):\t%s\n", len(addr), addr)
+	fmt.Printf("  address (%d-char):\t%s\n", len(addr), addr)
 	fmt.Printf("    HRP\t\t\t%s\n", strings.Repeat("^", len(prefix)))
 	fmt.Printf("    separator\t\t%s\n", strings.Repeat(" ", len(prefix))+"^")
 	fmt.Printf("    checksum\t\t%s\n", strings.Repeat(" ", len(addr)-6)+strings.Repeat("^", 6))
@@ -134,7 +123,7 @@ func runDecode(arguments []string) error {
 	}
 
 	fmt.Println("==> Bech32 Address Decoder")
-	fmt.Printf("  address (%d-byte):\t%s\n", len(*addr), *addr)
+	fmt.Printf("  address (%d-char):\t%s\n", len(*addr), *addr)
 	hrp, data, err := bech32.Decode(*addr)
 	if err != nil {
 		var e *bech32.SyntaxError

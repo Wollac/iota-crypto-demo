@@ -10,7 +10,7 @@ import (
 	"github.com/iotaledger/iota.go/trinary"
 )
 
-// EncodedLen returns the length of an encoding of n source bytes.
+// EncodedLen returns the trit-length of an encoding of n source bytes.
 func EncodedLen(n int) int { return n * 6 }
 
 // Encode encodes src into EncodedLen(len(src)) trits.
@@ -35,12 +35,12 @@ func EncodeToTrytes(src []byte) trinary.Trytes {
 	return dst.String()
 }
 
-// DecodedLen returns the length of a decoding of n source trits.
+// DecodedLen returns the byte-length of a decoding of n source trits.
 func DecodedLen(n int) int { return n / 6 }
 
 // Decode decodes src into DecodedLen(len(src)) bytes.
 // Decode expects that src contains a valid b1t6 encoding and that src has a length that is a multiple of 6.
-// If the input is malformed, DecodeTrytes returns an error.
+// If the input is malformed, Decode returns an error.
 func Decode(src trinary.Trits) ([]byte, error) {
 	if len(src)%6 != 0 {
 		return nil, fmt.Errorf("%w: length must be a multiple of 6", consts.ErrInvalidTritsLength)
