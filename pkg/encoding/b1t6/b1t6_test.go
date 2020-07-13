@@ -14,25 +14,25 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestEncodeToTrytes(t *testing.T) {
-	var test = []*struct {
-		bytes     []byte
-		expTrytes trinary.Trytes
-	}{
-		{[]byte{}, ""},
-		{[]byte{1}, "A9"},
-		{[]byte{127}, "SE"},
-		{[]byte{128}, "GV"},
-		{[]byte{255}, "Z9"},
-		{[]byte{0, 1}, "99A9"}, // endianness
-		{bytes.Repeat([]byte{0, 1}, 25), strings.Repeat("99A9", 25)}, // long
-		// RFC examples
-		{decodeHex("00"), "99"},
-		{decodeHex("0001027e7f8081fdfeff"), "99A9B9RESEGVHVX9Y9Z9"},
-		{decodeHex("9ba06c78552776a596dfe360cc2b5bf644c0f9d343a10e2e71debecd30730d03"), "GWLW9DLDDCLAJDQXBWUZYZODBYPBJCQ9NCQYT9IYMBMWNASBEDTZOYCYUBGDM9C9"},
-	}
+var testBytes = []*struct {
+	bytes     []byte
+	expTrytes trinary.Trytes
+}{
+	{[]byte{}, ""},
+	{[]byte{1}, "A9"},
+	{[]byte{127}, "SE"},
+	{[]byte{128}, "GV"},
+	{[]byte{255}, "Z9"},
+	{[]byte{0, 1}, "99A9"}, // endianness
+	{bytes.Repeat([]byte{0, 1}, 25), strings.Repeat("99A9", 25)}, // long
+	// RFC examples
+	{decodeHex("00"), "99"},
+	{decodeHex("0001027e7f8081fdfeff"), "99A9B9RESEGVHVX9Y9Z9"},
+	{decodeHex("9ba06c78552776a596dfe360cc2b5bf644c0f9d343a10e2e71debecd30730d03"), "GWLW9DLDDCLAJDQXBWUZYZODBYPBJCQ9NCQYT9IYMBMWNASBEDTZOYCYUBGDM9C9"},
+}
 
-	for _, tt := range test {
+func TestEncodeToTrytes(t *testing.T) {
+	for _, tt := range testBytes {
 		t.Run(fmt.Sprintf("%x", tt.bytes), func(t *testing.T) {
 			trytes := EncodeToTrytes(tt.bytes)
 			assert.Equal(t, tt.expTrytes, trytes)
@@ -40,33 +40,33 @@ func TestEncodeToTrytes(t *testing.T) {
 	}
 }
 
-func TestDecodeTrytes(t *testing.T) {
-	var tests = []*struct {
-		trytes   trinary.Trytes
-		expBytes []byte
-		expErr   error
-	}{
-		{"", []byte{}, nil},                       // empty
-		{"A", nil, consts.ErrInvalidTrytesLength}, // odd
-		{"TE", nil, consts.ErrInvalidTrytes},      // not a byte
-		{"FV", nil, consts.ErrInvalidTrytes},      // not a byte
-		{"MM", nil, consts.ErrInvalidTrytes},      // not a byte
-		{"NN", nil, consts.ErrInvalidTrytes},      // not a byte
-		{"LI", nil, consts.ErrInvalidTrytes},      // not a byte
-		{"22", nil, consts.ErrInvalidTrytes},      // not a tryte
-		{"A9", []byte{1}, nil},
-		{"SE", []byte{127}, nil},
-		{"GV", []byte{128}, nil},
-		{"Z9", []byte{255}, nil},
-		{"99A9", []byte{0, 1}, nil},                                       // endianness
-		{strings.Repeat("99A9", 25), bytes.Repeat([]byte{0, 1}, 25), nil}, // long
-		// RFC examples
-		{"99", decodeHex("00"), nil},
-		{"99A9B9RESEGVHVX9Y9Z9", decodeHex("0001027e7f8081fdfeff"), nil},
-		{"GWLW9DLDDCLAJDQXBWUZYZODBYPBJCQ9NCQYT9IYMBMWNASBEDTZOYCYUBGDM9C9", decodeHex("9ba06c78552776a596dfe360cc2b5bf644c0f9d343a10e2e71debecd30730d03"), nil},
-	}
+var testTrytes = []*struct {
+	trytes   trinary.Trytes
+	expBytes []byte
+	expErr   error
+}{
+	{"", []byte{}, nil},                       // empty
+	{"A", nil, consts.ErrInvalidTrytesLength}, // odd
+	{"TE", nil, consts.ErrInvalidTrytes},      // not a byte
+	{"FV", nil, consts.ErrInvalidTrytes},      // not a byte
+	{"MM", nil, consts.ErrInvalidTrytes},      // not a byte
+	{"NN", nil, consts.ErrInvalidTrytes},      // not a byte
+	{"LI", nil, consts.ErrInvalidTrytes},      // not a byte
+	{"22", nil, consts.ErrInvalidTrytes},      // not a tryte
+	{"A9", []byte{1}, nil},
+	{"SE", []byte{127}, nil},
+	{"GV", []byte{128}, nil},
+	{"Z9", []byte{255}, nil},
+	{"99A9", []byte{0, 1}, nil},                                       // endianness
+	{strings.Repeat("99A9", 25), bytes.Repeat([]byte{0, 1}, 25), nil}, // long
+	// RFC examples
+	{"99", decodeHex("00"), nil},
+	{"99A9B9RESEGVHVX9Y9Z9", decodeHex("0001027e7f8081fdfeff"), nil},
+	{"GWLW9DLDDCLAJDQXBWUZYZODBYPBJCQ9NCQYT9IYMBMWNASBEDTZOYCYUBGDM9C9", decodeHex("9ba06c78552776a596dfe360cc2b5bf644c0f9d343a10e2e71debecd30730d03"), nil},
+}
 
-	for _, tt := range tests {
+func TestDecodeTrytes(t *testing.T) {
+	for _, tt := range testTrytes {
 		t.Run(tt.trytes, func(t *testing.T) {
 			bs, err := DecodeTrytes(tt.trytes)
 			if assert.Truef(t, errors.Is(err, tt.expErr), "unexpected error: %v", err) {
