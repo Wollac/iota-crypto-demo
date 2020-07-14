@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wollac/iota-bip39-demo/pkg/ed25519/address"
+	"github.com/wollac/iota-bip39-demo/pkg/encoding/b1t6"
 )
 
 func TestSignVerify(t *testing.T) {
@@ -78,7 +79,7 @@ func TestVerify(t *testing.T) {
 		{"", consts.NullHashTrytes, consts.ErrInvalidTrytes, false},
 		// {consts.NullSignatureMessageFragmentTrytes, "", consts.ErrInvalidTrytesLength, false},
 		{consts.NullSignatureMessageFragmentTrytes, consts.NullHashTrytes, nil, false},
-		{trinary.MustPad("TE", consts.SignatureMessageFragmentSizeInTrytes), consts.NullHashTrytes, consts.ErrInvalidTrytes, false},
+		{trinary.MustPad("TE", consts.SignatureMessageFragmentSizeInTrytes), consts.NullHashTrytes, b1t6.ErrInvalidTrits, false},
 		{trinary.MustPad(nullSigTrytes+"AA", consts.SignatureMessageFragmentSizeInTrytes), consts.NullHashTrytes, nil, false},
 		{trinary.MustPad(nullSigTrytes, consts.SignatureMessageFragmentSizeInTrytes), consts.NullHashTrytes, nil, true},
 	}

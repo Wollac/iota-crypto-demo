@@ -10,13 +10,13 @@ import (
 )
 
 const (
-	tritsPerByte  = 5
+	tritsInByte   = 5
 	maxGroupValue = 1 + 3 + 9 + 27 + 81
 	minGroupValue = -maxGroupValue
 )
 
 // lookup table to unpack a byte into 5 trits.
-var tritsLUT = [256][tritsPerByte]int8{
+var tritsLUT = [256][tritsInByte]int8{
 	{0, 0, 0, 0, 0}, {1, 0, 0, 0, 0}, {-1, 1, 0, 0, 0}, {0, 1, 0, 0, 0}, {1, 1, 0, 0, 0}, {-1, -1, 1, 0, 0},
 	{0, -1, 1, 0, 0}, {1, -1, 1, 0, 0}, {-1, 0, 1, 0, 0}, {0, 0, 1, 0, 0}, {1, 0, 1, 0, 0}, {-1, 1, 1, 0, 0},
 	{0, 1, 1, 0, 0}, {1, 1, 1, 0, 0}, {-1, -1, -1, 1, 0}, {0, -1, -1, 1, 0}, {1, -1, -1, 1, 0}, {-1, 0, -1, 1, 0},
@@ -63,17 +63,18 @@ var tritsLUT = [256][tritsPerByte]int8{
 }
 
 // EncodedLen returns the byte-length of an encoding of n source trits.
-func EncodedLen(n int) int { return (n + tritsPerByte - 1) / tritsPerByte }
+func EncodedLen(n int) int { return (n + tritsInByte - 1) / tritsInByte }
 
 // Encode encodes src into EncodedLen(len(src)) bytes.
 // Encode implements the t5b1 encoding converting a trit string into binary.
 // If the length of src is not a multiple of 5, it is padded with zeroes.
+// If src does not contain valid trit-values the behavior of Encode is undefined.
 func Encode(src trinary.Trits) []byte {
 	dst := make([]byte, EncodedLen(len(src)))
 	for i := range dst {
-		tmp := src[i*tritsPerByte:]
+		tmp := src[i*tritsInByte:]
 		// incomplete group
-		if len(tmp) < tritsPerByte {
+		if len(tmp) < tritsInByte {
 			var v int
 			for j := len(tmp) - 1; j >= 0; j-- {
 				v = v*3 + int(tmp[j])
@@ -90,6 +91,7 @@ func Encode(src trinary.Trits) []byte {
 
 // EncodeToTrytes encodes src into bytes.
 // If the corresponding number of trits of src is not a multiple of 5, it is padded with zeroes.
+// If src does not contain valid tryte-values the behavior is undefined.
 func EncodeTrytes(src trinary.Trytes) []byte {
 	return Encode(trinary.MustTrytesToTrits(src))
 }
@@ -98,7 +100,7 @@ func EncodeTrytes(src trinary.Trytes) []byte {
 var ErrNonZeroPadding = errors.New("non-zero padding")
 
 // DecodedLen returns the trit-length of a decoding of n source bytes.
-func DecodedLen(n int) int { return n * tritsPerByte }
+func DecodedLen(n int) int { return n * tritsInByte }
 
 // Decode decodes src into DecodedLen(len(src)) trits.
 // Decode expects that src contains a valid t5b1 encoding.
