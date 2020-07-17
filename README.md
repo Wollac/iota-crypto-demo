@@ -3,7 +3,7 @@ This repository contains Go example implementations related to the cryptography 
 
 ## Packages
 It contains the following general packages:
-- `bech32` implements the bech32-based address format. 
+- `bech32` implements Bech32 addresses based on the format described in [BIP-0173](https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki). 
 - `bip32path` provides utilities for [BIP-0032](https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki) chains.
 - `bip39` implements the [BIP-0039](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) specification and mnemonic [word lists](https://github.com/bitcoin/bips/blob/master/bip-0039/bip-0039-wordlists.md).
 - `ed25519` provides utilities to generate and verify transaction bundles using the [Ed25519](https://ed25519.cr.yp.to/) signature scheme as described in the IOTA protocol [RFC-0009 draft](https://github.com/iotaledger/protocol-rfcs/pull/9).
