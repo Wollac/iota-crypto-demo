@@ -6,7 +6,7 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/wollac/iota-bip39-demo/pkg/slip10/btccurve"
+	"github.com/wollac/iota-crypto-demo/pkg/slip10/btccurve"
 )
 
 // Errors returned by the key derivation.

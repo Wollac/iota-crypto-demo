@@ -10,9 +10,9 @@ import (
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/kerl"
 	"github.com/iotaledger/iota.go/trinary"
-	"github.com/wollac/iota-bip39-demo/pkg/bip32path"
-	"github.com/wollac/iota-bip39-demo/pkg/bip39"
-	"github.com/wollac/iota-bip39-demo/pkg/slip10"
+	"github.com/wollac/iota-crypto-demo/pkg/bip32path"
+	"github.com/wollac/iota-crypto-demo/pkg/bip39"
+	"github.com/wollac/iota-crypto-demo/pkg/slip10"
 )
 
 var (

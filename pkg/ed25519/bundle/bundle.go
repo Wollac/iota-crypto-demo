@@ -10,8 +10,8 @@ import (
 	"github.com/iotaledger/iota.go/kerl"
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
-	"github.com/wollac/iota-bip39-demo/pkg/ed25519/address"
-	"github.com/wollac/iota-bip39-demo/pkg/ed25519/sign"
+	"github.com/wollac/iota-crypto-demo/pkg/ed25519/address"
+	"github.com/wollac/iota-crypto-demo/pkg/ed25519/sign"
 )
 
 // Errors returned during bundle generation.

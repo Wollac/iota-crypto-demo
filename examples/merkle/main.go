@@ -9,8 +9,8 @@ import (
 
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/trinary"
-	"github.com/wollac/iota-bip39-demo/pkg/encoding/b1t6"
-	"github.com/wollac/iota-bip39-demo/pkg/merkle"
+	"github.com/wollac/iota-crypto-demo/pkg/encoding/b1t6"
+	"github.com/wollac/iota-crypto-demo/pkg/merkle"
 )
 
 var (

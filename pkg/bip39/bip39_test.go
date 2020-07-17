@@ -11,7 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/wollac/iota-bip39-demo/internal/hexutil"
+	"github.com/wollac/iota-crypto-demo/internal/hexutil"
 )
 
 type Test struct {

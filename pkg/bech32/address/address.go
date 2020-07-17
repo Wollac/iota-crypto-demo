@@ -9,8 +9,8 @@ import (
 	"github.com/iotaledger/iota.go/address"
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/trinary"
-	"github.com/wollac/iota-bip39-demo/pkg/bech32"
-	"github.com/wollac/iota-bip39-demo/pkg/encoding/t5b1"
+	"github.com/wollac/iota-crypto-demo/pkg/bech32"
+	"github.com/wollac/iota-crypto-demo/pkg/encoding/t5b1"
 )
 
 // Errors returned during address parsing.

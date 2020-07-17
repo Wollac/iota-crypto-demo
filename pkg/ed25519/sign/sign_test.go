@@ -10,8 +10,8 @@ import (
 	"github.com/iotaledger/iota.go/trinary"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/wollac/iota-bip39-demo/pkg/ed25519/address"
-	"github.com/wollac/iota-bip39-demo/pkg/encoding/b1t6"
+	"github.com/wollac/iota-crypto-demo/pkg/ed25519/address"
+	"github.com/wollac/iota-crypto-demo/pkg/encoding/b1t6"
 )
 
 func TestSignVerify(t *testing.T) {

@@ -8,7 +8,7 @@ import (
 	"math/bits"
 
 	"github.com/iotaledger/iota.go/trinary"
-	"github.com/wollac/iota-bip39-demo/pkg/encoding/t5b1"
+	"github.com/wollac/iota-crypto-demo/pkg/encoding/t5b1"
 	_ "golang.org/x/crypto/blake2b" // BLAKE2b_512 is the default hashing algorithm
 )
 

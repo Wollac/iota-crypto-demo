@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/wollac/iota-bip39-demo/pkg/bech32/base32"
+	"github.com/wollac/iota-crypto-demo/pkg/bech32/base32"
 )
 
 const (
