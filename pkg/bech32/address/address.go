@@ -26,7 +26,7 @@ type Prefix int
 // Network prefix options
 const (
 	Mainnet Prefix = iota
-	Testnet
+	Devnet
 )
 
 func (p Prefix) String() string {
@@ -61,7 +61,7 @@ func (v Version) String() string {
 
 // Bech32 encodes the provided addr as a bech32 string.
 func Bech32(hrp Prefix, addr Address) (string, error) {
-	return bech32.Encode(hrp.String(), append([]byte{byte(addr.Version())}, addr.Bytes()...))
+	return bech32.Encode(hrp.String(), addr.Bytes())
 }
 
 // ParseBech32 decodes a bech32 encoded string.
@@ -122,9 +122,15 @@ type Address interface {
 
 type wotsAddress trinary.Hash
 
-func (wotsAddress) Version() Version { return WOTS }
-func (a wotsAddress) Bytes() []byte  { return t5b1.EncodeTrytes(trinary.Trytes(a)) }
-func (a wotsAddress) String() string { return string(a) }
+func (wotsAddress) Version() Version {
+	return WOTS
+}
+func (a wotsAddress) Bytes() []byte {
+	return append([]byte{byte(WOTS)}, t5b1.EncodeTrytes(trinary.Trytes(a))...)
+}
+func (a wotsAddress) String() string {
+	return string(a)
+}
 
 // WOTSAddress creates an Address from the provided W-OTS hash.
 func WOTSAddress(hash trinary.Hash) (Address, error) {
@@ -137,9 +143,15 @@ func WOTSAddress(hash trinary.Hash) (Address, error) {
 
 type ed25519Address [32]byte
 
-func (ed25519Address) Version() Version { return Ed25519 }
-func (a ed25519Address) Bytes() []byte  { return append([]byte{}, a[:]...) }
-func (a ed25519Address) String() string { return hex.EncodeToString(a[:]) }
+func (ed25519Address) Version() Version {
+	return Ed25519
+}
+func (a ed25519Address) Bytes() []byte {
+	return append([]byte{byte(Ed25519)}, a[:]...)
+}
+func (a ed25519Address) String() string {
+	return hex.EncodeToString(a[:])
+}
 
 // Ed25519Address creates an address from a 32-byte hash.
 func Ed25519Address(hash []byte) (Address, error) {

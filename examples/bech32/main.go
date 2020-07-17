@@ -95,16 +95,17 @@ func runEncode(arguments []string) error {
 		}
 	}
 
-	s, err := address.Bech32(address.Mainnet, addr)
+	s, err := address.Bech32(prefix, addr)
 	if err != nil {
 		return err
 	}
 
 	fmt.Println("==> Bech32 Address Encoder")
 	fmt.Printf("  hash (%d-char):\t%s\n", len(addr.String()), addr.String())
+	fmt.Printf("  addr bytes (%d-byte):\t%x\n", len(addr.Bytes()), addr.Bytes())
 	fmt.Printf("  network (%d-char):\t%s\n", len(prefix.String()), prefix.String())
 	fmt.Printf("  version (1-byte):\t%b (%s)\n", addr.Version(), addr.Version().String())
-	fmt.Printf("  address (%d-char):\t%s\n", len(s), s)
+	fmt.Printf("  bech32 (%d-char):\t%s\n", len(s), s)
 	fmt.Printf("    checksum\t\t%s\n", strings.Repeat(" ", len(s)-6)+strings.Repeat("^", 6))
 	return nil
 }
@@ -115,7 +116,7 @@ func runDecode(arguments []string) error {
 	}
 
 	fmt.Println("==> Bech32 Address Decoder")
-	fmt.Printf("  address (%d-char):\t%s\n", len(*addressString), *addressString)
+	fmt.Printf("  bech32 (%d-char):\t%s\n", len(*addressString), *addressString)
 	prefix, addr, err := address.ParseBech32(*addressString)
 	if err != nil {
 		var e *bech32.SyntaxError
@@ -128,5 +129,6 @@ func runDecode(arguments []string) error {
 	fmt.Printf("  network (%d-char):\t%s\n", len(prefix.String()), prefix.String())
 	fmt.Printf("  version (1-byte):\t%b (%s)\n", addr.Version(), addr.Version().String())
 	fmt.Printf("  hash (%d-char):\t%s\n", len(addr.String()), addr.String())
+	fmt.Printf("  addr bytes (%d-byte):\t%x\n", len(addr.Bytes()), addr.Bytes())
 	return nil
 }
