@@ -89,7 +89,7 @@ func Encode(src trinary.Trits) []byte {
 	return dst
 }
 
-// EncodeToTrytes encodes src into bytes.
+// EncodeTrytes encodes src into bytes.
 // If the corresponding number of trits of src is not a multiple of 5, it is padded with zeroes.
 // If src does not contain valid tryte-values the behavior is undefined.
 func EncodeTrytes(src trinary.Trytes) []byte {

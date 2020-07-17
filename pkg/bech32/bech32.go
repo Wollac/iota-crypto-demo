@@ -17,15 +17,15 @@ const (
 
 var charset = "qpzry9x8gf2tvdw0s3jn54khce6mua7l"
 
-// Encode encodes the HRP string and the src data as a Bech32 string.
+// Encode encodes the String string and the src data as a Bech32 string.
 // It returns an error when the input is invalid.
 func Encode(hrp string, src []byte) (string, error) {
 	if len(hrp)+base32.EncodedLen(len(src))+checksumLength+1 > maxStringLength {
-		return "", fmt.Errorf("%w: HRP length=%d, data length=%d", ErrInvalidLength, len(hrp), base32.EncodedLen(len(src)))
+		return "", fmt.Errorf("%w: String length=%d, data length=%d", ErrInvalidLength, len(hrp), base32.EncodedLen(len(src)))
 	}
 	// validate the human-readable part
 	if len(hrp) < 1 {
-		return "", fmt.Errorf("%w: HRP must not be empty", ErrInvalidLength)
+		return "", fmt.Errorf("%w: String must not be empty", ErrInvalidLength)
 	}
 	for _, c := range hrp {
 		if !isValidHRPChar(c) {

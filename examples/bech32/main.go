@@ -8,36 +8,31 @@ import (
 	"os"
 	"strings"
 
-	"github.com/iotaledger/iota.go/address"
-	"github.com/iotaledger/iota.go/consts"
-	"github.com/iotaledger/iota.go/kerl"
-	"github.com/iotaledger/iota.go/trinary"
 	"github.com/wollac/iota-bip39-demo/pkg/bech32"
+	"github.com/wollac/iota-bip39-demo/pkg/bech32/address"
+)
+
+// default values
+var (
+	defPrefix = address.Mainnet
+	defWOTS   = func() address.Address {
+		addr, _ := address.WOTSAddress("EQSAUZXULTTYZCLNJNTXQTQHOMOFZERHTCGTXOLTVAHKSA9OGAZDEKECURBRIXIJWNPFCQIOVFVVXJVD9")
+		return addr
+	}()
+	defBech32 = func() string {
+		addr, _ := address.Ed25519Address([]byte{82, 253, 252, 7, 33, 130, 101, 79, 22, 63, 95, 15, 154, 98, 29, 114, 149, 102, 199, 77, 16, 3, 124, 77, 123, 187, 4, 7, 209, 226, 198, 73})
+		s, _ := address.Bech32(defPrefix, addr)
+		return s
+	}()
 )
 
 var (
-	encode = flag.NewFlagSet("encode", flag.ExitOnError)
-	hash   = encode.String(
-		"hash",
-		"EQSAUZXULTTYZCLNJNTXQTQHOMOFZERHTCGTXOLTVAHKSA9OGAZDEKECURBRIXIJWNPFCQIOVFVVXJVD9DGCJRJTHZ",
-		"WOTS or hex hash to encode in the address",
-	)
+	encode       = flag.NewFlagSet("encode", flag.ExitOnError)
+	hashString   = encode.String("hash", defWOTS.String(), "tryte-encoded W-OTS hash or hex-encoded binary hash")
+	prefixString = encode.String("prefix", defPrefix.String(), "network prefix")
 
-	decode = flag.NewFlagSet("decode", flag.ExitOnError)
-	addr   = decode.String(
-		"addr",
-		"iota1qy84dkjj6ugcheyc98d6dvgf2szjkzr7yyma8vje5neng0h5ggpxgz88uep",
-		"bech32 address",
-	)
-)
-
-var (
-	prefix = "iota"
-
-	decodeTrytes = kerl.KerlBytesToTrytes
-	encodeTrytes = kerl.KerlTrytesToBytes
-	//encodeTrytes = func(src trinary.Hash) ([]byte, error) { return t5b1.EncodeTrytes(src), nil }
-	//decodeTrytes = t5b1.DecodeToTrytes
+	decode        = flag.NewFlagSet("decode", flag.ExitOnError)
+	addressString = decode.String("address", defBech32, "bech32 encoded IOTA address")
 )
 
 func main() {
@@ -65,55 +60,52 @@ func help() {
 	fmt.Printf("Usage of %s:\n", os.Args[0])
 	fmt.Printf("\t<command> [arguments]\n\n")
 	fmt.Printf("The commands are:\n")
-	fmt.Printf("\t%s\tencode an address\n", encode.Name())
-	fmt.Printf("\t%s\tdecode an address\n\n", decode.Name())
+	fmt.Printf("\t%s\tencode a bech32 address\n", encode.Name())
+	fmt.Printf("\t%s\tdecode a bech32 address\n\n", decode.Name())
 	os.Exit(2)
 }
 
 func runEncode(arguments []string) error {
-	if err := encode.Parse(arguments); err != nil {
+	err := encode.Parse(arguments)
+	if err != nil {
 		return err
 	}
+	prefix, err := address.ParsePrefix(*prefixString)
+	if err != nil {
+		return fmt.Errorf("invalid prefix: %w", err)
+	}
 
-	var (
-		data    []byte
-		version string
-	)
-	switch len(*hash) {
+	var addr address.Address
+	switch len(*hashString) {
 	case 81:
 		fallthrough
 	case 90:
-		if err := validateWOTSAddress(*hash); err != nil {
-			return err
-		}
-		bytes, err := encodeTrytes((*hash)[:81])
+		addr, err = address.WOTSAddress(*hashString)
 		if err != nil {
 			return err
 		}
-		data = append([]byte{0}, bytes...)
-		version = "WOTS"
 	default:
-		bytes, err := hex.DecodeString(*hash)
+		bytes, err := hex.DecodeString(*hashString)
 		if err != nil {
 			return err
 		}
-		data = append([]byte{1}, bytes...)
-		version = "Ed25519"
+		addr, err = address.Ed25519Address(bytes)
+		if err != nil {
+			return err
+		}
 	}
 
-	addr, err := bech32.Encode(prefix, data)
+	s, err := address.Bech32(address.Mainnet, addr)
 	if err != nil {
 		return err
 	}
 
 	fmt.Println("==> Bech32 Address Encoder")
-	fmt.Printf("  hash (%d-char):\t%s\n", len(*hash), *hash)
-	fmt.Printf("  network (%d-byte):\t%s\n", len(prefix), prefix)
-	fmt.Printf("  version (1-byte):\t%s\n", version)
-	fmt.Printf("  address (%d-char):\t%s\n", len(addr), addr)
-	fmt.Printf("    HRP\t\t\t%s\n", strings.Repeat("^", len(prefix)))
-	fmt.Printf("    separator\t\t%s\n", strings.Repeat(" ", len(prefix))+"^")
-	fmt.Printf("    checksum\t\t%s\n", strings.Repeat(" ", len(addr)-6)+strings.Repeat("^", 6))
+	fmt.Printf("  hash (%d-char):\t%s\n", len(addr.String()), addr.String())
+	fmt.Printf("  network (%d-char):\t%s\n", len(prefix.String()), prefix.String())
+	fmt.Printf("  version (1-byte):\t%b (%s)\n", addr.Version(), addr.Version().String())
+	fmt.Printf("  address (%d-char):\t%s\n", len(s), s)
+	fmt.Printf("    checksum\t\t%s\n", strings.Repeat(" ", len(s)-6)+strings.Repeat("^", 6))
 	return nil
 }
 
@@ -123,8 +115,8 @@ func runDecode(arguments []string) error {
 	}
 
 	fmt.Println("==> Bech32 Address Decoder")
-	fmt.Printf("  address (%d-char):\t%s\n", len(*addr), *addr)
-	hrp, data, err := bech32.Decode(*addr)
+	fmt.Printf("  address (%d-char):\t%s\n", len(*addressString), *addressString)
+	prefix, addr, err := address.ParseBech32(*addressString)
 	if err != nil {
 		var e *bech32.SyntaxError
 		if errors.As(err, &e) {
@@ -133,33 +125,8 @@ func runDecode(arguments []string) error {
 		return err
 	}
 
-	fmt.Printf("  network (%d-byte):\t%s\n", len(hrp), hrp)
-	switch data[0] {
-	case 0:
-		fmt.Printf("  version (1-byte):\t%s\n", "WOTS")
-		hash, err := decodeTrytes(data[1:])
-		if err != nil {
-			return err
-		}
-		fmt.Printf("  hash (%d-tryte):\t%s\n", len(hash), hash)
-	case 1:
-		fmt.Printf("  version (1-byte):\t%s\n", "Ed25519")
-		fmt.Printf("  hash (%d-tryte):\t%x\n", len(data[1:]), data[1:])
-	default:
-		return fmt.Errorf("invalid version: %d", data[0])
-	}
-
-	return nil
-}
-
-func validateWOTSAddress(hash trinary.Hash) error {
-	if err := address.ValidAddress(hash); err != nil {
-		return err
-	}
-	// a valid hash must have the last trit set to zero
-	lastTrits := trinary.MustTrytesToTrits(string(hash[consts.HashTrytesSize-1]))
-	if lastTrits[consts.TritsPerTryte-1] != 0 {
-		return consts.ErrInvalidHash
-	}
+	fmt.Printf("  network (%d-char):\t%s\n", len(prefix.String()), prefix.String())
+	fmt.Printf("  version (1-byte):\t%b (%s)\n", addr.Version(), addr.Version().String())
+	fmt.Printf("  hash (%d-char):\t%s\n", len(addr.String()), addr.String())
 	return nil
 }

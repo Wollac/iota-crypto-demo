@@ -28,7 +28,7 @@ func bech32Polymod(values []byte) int {
 	return chk
 }
 
-// For more details on HRP expansion, please refer to BIP 173.
+// For more details on String expansion, please refer to BIP 173.
 func bech32HrpExpand(s string) []byte {
 	res := make([]byte, 0, 2*len(s)+1)
 	for _, x := range []byte(s) {
