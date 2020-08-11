@@ -7,7 +7,8 @@ It contains the following general packages:
 - `bip32path` provides utilities for [BIP-0032](https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki) chains.
 - `bip39` implements the [BIP-0039](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) specification and mnemonic [word lists](https://github.com/bitcoin/bips/blob/master/bip-0039/bip-0039-wordlists.md).
 - `ed25519` provides utilities to generate and verify transaction bundles using the [Ed25519](https://ed25519.cr.yp.to/) signature scheme as described in the IOTA protocol [RFC-0009 draft](https://github.com/iotaledger/protocol-rfcs/pull/9).
-- `merkle` implements the combination of multiple bundle hashes into one Merkle tree as described in the IOTA protocol [RFC-0012 draft](https://github.com/iotaledger/protocol-rfcs/pull/12).
+- `merkle` implements the combination of multiple bundle hashes into one Merkle tree as described in the IOTA protocol [RFC-0012](https://github.com/iotaledger/protocol-rfcs/blob/master/text/0012-milestone-merkle-validation/0012-milestone-merkle-validation.md).
+- `pow` implements the Curl-based proof of work for arbitrary binary data as mentioned in [RFC-0017 draft](https://github.com/iotaledger/protocol-rfcs/pull/17).
 - `slip10` implements the [SLIP-0010](https://github.com/satoshilabs/slips/blob/master/slip-0010.md) private key derivation.
 - `encoding/b1t6` implements the binary-to-ternary encoding as described in the IOTA protocol [RFC-0015](https://github.com/iotaledger/protocol-rfcs/blob/master/text/0015-binary-to-ternary-encoding/0015-binary-to-ternary-encoding.md).
 
