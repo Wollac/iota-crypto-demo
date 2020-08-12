@@ -2,14 +2,22 @@ package pow
 
 import (
 	"context"
+	"crypto"
+	"encoding/binary"
 	"math"
+	"math/rand"
 	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/curl"
+	"github.com/iotaledger/iota.go/trinary"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/wollac/iota-crypto-demo/pkg/encoding/b1t6"
+	"github.com/wollac/iota-crypto-demo/pkg/encoding/b1t8"
+	"golang.org/x/crypto/blake2b"
 )
 
 const (
@@ -17,35 +25,34 @@ const (
 	target  = 6
 )
 
-var testWorker = New(curl.NewCurlP81, workers)
+var testWorker = New(crypto.BLAKE2b_256, workers)
 
-func TestWorker_Work(t *testing.T) {
-	nonce, err := testWorker.Mine(context.Background(), nil, target)
+func TestWorker_Mine(t *testing.T) {
+	msg := append([]byte("test"), make([]byte, NonceBytes)...)
+	nonce, err := testWorker.Mine(context.Background(), msg[:len(msg)-NonceBytes], target)
 	require.NoError(t, err)
-	zeros, err := testWorker.TrailingZeros(nil, nonce)
-	assert.GreaterOrEqual(t, zeros, target)
-	assert.NoError(t, err)
+
+	binary.LittleEndian.PutUint64(msg[len(msg)-NonceBytes:], nonce)
+	id, pow := testWorker.PoW(msg)
+	assert.Equal(t, blake2b.Sum256(msg), id)
+	assert.GreaterOrEqual(t, pow, math.Pow(3, target)/float64(len(msg)))
 }
 
 func TestWorker_Validate(t *testing.T) {
 	tests := []*struct {
-		msg      []byte
-		nonce    uint64
-		expZeros int
-		expPoW   float64
-		expErr   error
+		msg    []byte
+		expPoW float64
+		expErr error
 	}{
-		{msg: nil, nonce: 0, expZeros: 0, expPoW: math.Inf(1), expErr: nil},
-		{msg: []byte{0}, nonce: 10540996613548938299, expZeros: 16, expPoW: math.Pow(3, 16), expErr: nil},
-		{msg: make([]byte, 10240), nonce: 0, expZeros: 1, expPoW: 3. / 10240, expErr: nil},
+		{msg: []byte{0, 0, 0, 0, 0, 0, 0, 0}, expPoW: math.Pow(3, 1) / 8, expErr: nil},
+		{msg: []byte{249, 189, 170, 170, 170, 170, 170, 170}, expPoW: math.Pow(3, 10) / 8, expErr: nil},
+		{msg: []byte{77, 32, 10, 0, 0, 0, 0, 0}, expPoW: math.Pow(3, 15) / 8, expErr: nil},
+		{msg: make([]byte, 10000), expPoW: math.Pow(3, 0) / 10000, expErr: nil},
 	}
 
 	for _, tt := range tests {
-		zeros, err := testWorker.TrailingZeros(tt.msg, tt.nonce)
-		pow, _ := testWorker.PoW(tt.msg, tt.nonce)
-		assert.Equal(t, tt.expZeros, zeros)
+		_, pow := testWorker.PoW(tt.msg)
 		assert.Equal(t, tt.expPoW, pow)
-		assert.Equal(t, tt.expErr, err)
 	}
 }
 
@@ -63,9 +70,75 @@ func TestWorker_Cancel(t *testing.T) {
 	assert.Eventually(t, func() bool { return err == ErrCancelled }, time.Second, 10*time.Millisecond)
 }
 
+func TestEncodeNonce(t *testing.T) {
+	const nonce = 12345678901234567890
+	var nonceBuf [NonceBytes]byte
+	binary.LittleEndian.PutUint64(nonceBuf[:], nonce)
+
+	exp := make(trinary.Trits, 64)
+	b1t8.Encode(exp, nonceBuf[:])
+	actual := make(trinary.Trits, 64)
+	encodeNonce(actual, nonce)
+	assert.Equal(t, exp, actual)
+}
+
+func BenchmarkPoW(b *testing.B) {
+	data := make([][]byte, b.N)
+	for i := range data {
+		data[i] = make([]byte, 1500)
+		if _, err := rand.Read(data[i]); err != nil {
+			b.Fatal(err)
+		}
+	}
+	b.ResetTimer()
+
+	for i := range data {
+		_, _ = testWorker.PoW(data[i])
+	}
+}
+
+func BenchmarkID(b *testing.B) {
+	data := make([][]byte, b.N)
+	for i := range data {
+		data[i] = make([]byte, 1500)
+		if _, err := rand.Read(data[i]); err != nil {
+			b.Fatal(err)
+		}
+	}
+	b.ResetTimer()
+
+	for i := range data {
+		// compute the Blake2b hash corresponding to the ID
+		_ = blake2b.Sum256(data[i])
+	}
+}
+
+func BenchmarkCurlPoW(b *testing.B) {
+	data := make([][]byte, b.N)
+	for i := range data {
+		data[i] = make([]byte, 1500)
+		if _, err := rand.Read(data[i]); err != nil {
+			b.Fatal(err)
+		}
+	}
+	b.ResetTimer()
+
+	for i := range data {
+		// compute the Blake2b hash corresponding to the ID
+		_ = blake2b.Sum256(data[i])
+		// convert entire message to trits
+		trits := make(trinary.Trits, b1t6.EncodedLen(1500))
+		b1t6.Encode(trits, data[i])
+		// compute the Curl-P-81 hash to validate the PoW
+		c := curl.NewCurlP81()
+		_ = c.Absorb(trits)
+		_, _ = c.Squeeze(consts.HashTrinarySize)
+	}
+}
+
 func BenchmarkWorker(b *testing.B) {
 	var (
-		w       = New(curl.NewCurlP81, 1)
+		w       = New(crypto.BLAKE2b_256, 1)
 		buf     = make([]byte, 1024)
 		done    uint32
 		counter uint64

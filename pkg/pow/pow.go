@@ -3,13 +3,15 @@ package pow
 
 import (
 	"context"
+	"encoding/binary"
 	"errors"
+	"hash"
 	"math"
 	"sync"
 	"sync/atomic"
 
 	"github.com/iotaledger/iota.go/consts"
-	sponge "github.com/iotaledger/iota.go/signing/utils"
+	"github.com/iotaledger/iota.go/curl"
 	"github.com/iotaledger/iota.go/trinary"
 	"github.com/wollac/iota-crypto-demo/pkg/encoding/b1t6"
 )
@@ -20,17 +22,26 @@ var (
 	ErrDone      = errors.New("done")
 )
 
-const nonceTrits = 64
+const (
+	NonceBytes = 8
+	nonceTrits = NonceBytes * 8
+)
+
+// Hash identifies a cryptographic hash function that is implemented in another package.
+type Hash interface {
+	// New returns a new hash.Hash calculating the given hash function.
+	New() hash.Hash
+}
 
 // The Worker provides PoW functionality using an arbitrary hash function.
 type Worker struct {
-	hash       sponge.SpongeFunctionCreator
+	hash       Hash
 	numWorkers int
 }
 
 // New creates a new PoW based on the provided hash.
 // The optional numWorkers specifies how many go routines are used to mine.
-func New(hash sponge.SpongeFunctionCreator, numWorkers ...int) *Worker {
+func New(hash Hash, numWorkers ...int) *Worker {
 	w := &Worker{
 		hash:       hash,
 		numWorkers: 1,
@@ -41,10 +52,30 @@ func New(hash sponge.SpongeFunctionCreator, numWorkers ...int) *Worker {
 	return w
 }
 
-// Mine performs the PoW.
+// PoW returns the ID and the proof-of-work score of the message.
+func (w *Worker) PoW(msg []byte) (id [32]byte, x float64) {
+	h := w.hash.New()
+	dataLen := len(msg) - NonceBytes
+	// the PoW digest is the hash of msg without the nonce
+	h.Write(msg[:dataLen])
+	powDigest := h.Sum(nil)
+	// the message ID is the hash of msg including the nonce
+	h.Write(msg[dataLen:])
+	h.Sum(id[:0])
+
+	// extract the nonce from msg and compute the number of trailing zeros
+	nonce := binary.LittleEndian.Uint64(msg[dataLen:])
+	zeros := trailingZeros(powDigest, nonce)
+
+	x = math.Pow(3, float64(zeros))
+	x /= float64(len(msg))
+	return
+}
+
+// Mine performs the PoW for data.
 // It increments the nonce until the target number of trailing zeroes in the 243-trit hash is reached.
 // The computation can be be canceled anytime using the provided ctx.
-func (w *Worker) Mine(ctx context.Context, msg []byte, target int) (uint64, error) {
+func (w *Worker) Mine(ctx context.Context, data []byte, targetZeros int) (uint64, error) {
 	var (
 		done    uint32
 		counter uint64
@@ -52,6 +83,10 @@ func (w *Worker) Mine(ctx context.Context, msg []byte, target int) (uint64, erro
 		results = make(chan uint64, w.numWorkers)
 		closing = make(chan struct{})
 	)
+
+	h := w.hash.New()
+	h.Write(data)
+	powDigest := h.Sum(nil)
 
 	// stop when the context has been canceled
 	go func() {
@@ -70,7 +105,7 @@ func (w *Worker) Mine(ctx context.Context, msg []byte, target int) (uint64, erro
 		go func() {
 			defer wg.Done()
 
-			nonce, workerErr := w.worker(msg, startNonce, target, &done, &counter)
+			nonce, workerErr := w.worker(powDigest, startNonce, targetZeros, &done, &counter)
 			if workerErr != nil {
 				return
 			}
@@ -89,87 +124,38 @@ func (w *Worker) Mine(ctx context.Context, msg []byte, target int) (uint64, erro
 	return nonce, nil
 }
 
-// PoW returns the proof of work of msg.
-func (w *Worker) PoW(msg []byte, nonce uint64) (float64, error) {
-	difficulty, err := w.TrailingZeros(msg, nonce)
-	if err != nil {
-		return 0, err
-	}
-	x := math.Pow(3, float64(difficulty))
-	x /= float64(len(msg))
-	return x, nil
+func trailingZeros(powDigest []byte, nonce uint64) int {
+	buf := make(trinary.Trits, consts.HashTrinarySize)
+	b1t6.Encode(buf, powDigest)
+	// set nonce in the buffer
+	encodeNonce(buf[consts.HashTrinarySize-nonceTrits:], nonce)
+
+	c := curl.NewCurlP81()
+	_ = c.Absorb(buf)
+	digest, _ := c.Squeeze(consts.HashTrinarySize)
+	return trinary.TrailingZeros(digest)
 }
 
-// TrailingZeros returns the number of trailing zeros in the ternary digest of msg.
-func (w *Worker) TrailingZeros(msg []byte, nonce uint64) (int, error) {
-	encoded := make(trinary.Trits, b1t6.EncodedLen(len(msg)))
-	b1t6.Encode(encoded, msg)
-	trits := pad(encoded, nonceTrits)
-	// write nonce into the buffer
-	encodeNonce(trits[len(trits)-nonceTrits:], nonce)
+func (w *Worker) worker(powDigest []byte, startNonce uint64, target int, done *uint32, counter *uint64) (uint64, error) {
+	buf := make(trinary.Trits, consts.HashTrinarySize)
+	b1t6.Encode(buf, powDigest)
 
-	h := w.hash()
-	defer h.Reset()
-
-	if err := h.Absorb(trits); err != nil {
-		return 0, err
-	}
-	digest, err := h.Squeeze(consts.HashTrinarySize)
-	if err != nil {
-		return 0, err
-	}
-	return trinary.TrailingZeros(digest), nil
-}
-
-func (w *Worker) worker(data []byte, startNonce uint64, target int, done *uint32, counter *uint64) (uint64, error) {
-	encoded := make(trinary.Trits, b1t6.EncodedLen(len(data)))
-	b1t6.Encode(encoded, data)
-	buf := pad(encoded, nonceTrits)
-
-	h := w.hash()
-	defer h.Reset()
-
-	// absorb everything but the last 243-trit block
-	if len(buf) > consts.HashTrinarySize {
-		if err := h.Absorb(buf[:len(buf)-consts.HashTrinarySize]); err != nil {
-			return 0, err
-		}
-	}
-
-	var (
-		lastBlock = buf[len(buf)-consts.HashTrinarySize:]
-		nonceBuf  = lastBlock[consts.HashTrinarySize-nonceTrits:]
-	)
+	c := curl.NewCurlP81()
+	nonceBuf := buf[consts.HashTrinarySize-nonceTrits:]
 	for nonce := startNonce; atomic.LoadUint32(done) == 0; nonce++ {
 		atomic.AddUint64(counter, 1)
 
 		// update nonce in the last block
 		encodeNonce(nonceBuf, nonce)
 
-		// clone the hash state and only absorb the last block
-		dup := h.Clone()
-		if err := dup.Absorb(lastBlock); err != nil {
-			return 0, err
-		}
-		digest, err := dup.Squeeze(consts.HashTrinarySize)
-		if err != nil {
-			return 0, err
-		}
+		c.Reset()
+		_ = c.Absorb(buf)
+		digest, _ := c.Squeeze(consts.HashTrinarySize)
 		if trinary.TrailingZeros(digest) >= target {
 			return nonce, nil
 		}
 	}
 	return 0, ErrDone
-}
-
-// pad applies the 1*0 padding to return a multiple of 243 trits where the last r trits are reserved.
-func pad(trits trinary.Trits, r int) trinary.Trits {
-	// round to the nearest multiple of 243
-	paddedLen := ((len(trits) + r + consts.HashTrinarySize) / consts.HashTrinarySize) * consts.HashTrinarySize
-	buf := make(trinary.Trits, paddedLen)
-	copy(buf, trits)
-	buf[len(trits)] = 1 // always at least add the 1
-	return buf
 }
 
 // encodeNonce encodes nonce as 64 trits using the b1t8 encoding.
