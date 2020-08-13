@@ -102,7 +102,9 @@ func (w *Worker) PoW(msg []byte, nonce uint64) (float64, error) {
 
 // TrailingZeros returns the number of trailing zeros in the ternary digest of msg.
 func (w *Worker) TrailingZeros(msg []byte, nonce uint64) (int, error) {
-	trits := pad(b1t6.Encode(msg), nonceTrits)
+	encoded := make(trinary.Trits, b1t6.EncodedLen(len(msg)))
+	b1t6.Encode(encoded, msg)
+	trits := pad(encoded, nonceTrits)
 	// write nonce into the buffer
 	encodeNonce(trits[len(trits)-nonceTrits:], nonce)
 
@@ -120,7 +122,9 @@ func (w *Worker) TrailingZeros(msg []byte, nonce uint64) (int, error) {
 }
 
 func (w *Worker) worker(data []byte, startNonce uint64, target int, done *uint32, counter *uint64) (uint64, error) {
-	buf := pad(b1t6.Encode(data), nonceTrits)
+	encoded := make(trinary.Trits, b1t6.EncodedLen(len(data)))
+	b1t6.Encode(encoded, data)
+	buf := pad(encoded, nonceTrits)
 
 	h := w.hash()
 	defer h.Reset()

@@ -33,7 +33,9 @@ var encDecTests = []*struct {
 func TestEncode(t *testing.T) {
 	for _, tt := range encDecTests {
 		t.Run(fmt.Sprintf("%x", tt.bytes), func(t *testing.T) {
-			dst := Encode(tt.bytes)
+			dst := make(trinary.Trits, EncodedLen(len(tt.bytes)))
+			n := Encode(dst, tt.bytes)
+			assert.Equal(t, len(dst), n)
 			assert.Equal(t, trinary.MustTrytesToTrits(tt.trytes), dst)
 		})
 	}
@@ -51,8 +53,11 @@ func TestEncodeToTrytes(t *testing.T) {
 func TestDecode(t *testing.T) {
 	for _, tt := range encDecTests {
 		t.Run(tt.trytes, func(t *testing.T) {
-			dst, err := Decode(trinary.MustTrytesToTrits(tt.trytes))
+			src := trinary.MustTrytesToTrits(tt.trytes)
+			dst := make([]byte, DecodedLen(len(src)))
+			n, err := Decode(dst, src)
 			if assert.NoError(t, err) {
+				assert.Equal(t, len(dst), n)
 				assert.Equal(t, tt.bytes, dst)
 			}
 		})
@@ -70,47 +75,41 @@ func TestDecodeTrytes(t *testing.T) {
 	}
 }
 
-func TestDecodeErr(t *testing.T) {
-	var tests = []*struct {
-		src trinary.Trits
-		err error
-	}{
-		{trinary.Trits{0, 0, 0, 0, 0}, ErrInvalidLength},
-		{trinary.Trits{1, 0, 0}, ErrInvalidLength},
-		{trinary.Trits{-1, 1, -1, -1, -1, 1}, ErrInvalidTrits},
-		{trinary.Trits{0, -1, 1, 1, 1, -1}, ErrInvalidTrits},
-		{trinary.Trits{1, 1, 1, 1, 1, 1}, ErrInvalidTrits},
-		{trinary.Trits{-1, -1, -1, -1, -1, -1}, ErrInvalidTrits},
-		{trinary.Trits{0, 1, 1, 0, 0, 1}, ErrInvalidTrits},
-	}
+var errTests = []*struct {
+	trytes trinary.Trytes
+	bytes  []byte
+	err    error
+}{
+	{"A", []byte{}, ErrInvalidLength},
+	{"A9A", []byte{1}, ErrInvalidLength},
+	{"99A9A", []byte{0, 1}, ErrInvalidLength},
+	{"TE", []byte{}, ErrInvalidTrits},
+	{"FV", []byte{}, ErrInvalidTrits},
+	{"MM", []byte{}, ErrInvalidTrits},
+	{"NN", []byte{}, ErrInvalidTrits},
+	{"LI", []byte{}, ErrInvalidTrits},
+	{"Z9TE", []byte{255}, ErrInvalidTrits},
+	{"99A9AFV", []byte{0, 1}, ErrInvalidTrits},
+}
 
-	for _, tt := range tests {
-		t.Run(fmt.Sprint(tt.src), func(t *testing.T) {
-			dst, err := Decode(tt.src)
+func TestDecodeErr(t *testing.T) {
+	for _, tt := range errTests {
+		t.Run(fmt.Sprint(tt.trytes), func(t *testing.T) {
+			trits := trinary.MustTrytesToTrits(tt.trytes)
+			dst := make([]byte, DecodedLen(len(trits))+10)
+			n, err := Decode(dst, trits)
 			assert.Truef(t, errors.Is(err, tt.err), "unexpected error: %v", err)
-			assert.Zero(t, dst)
+			assert.Equal(t, tt.bytes, dst[:n])
 		})
 	}
 }
 
 func TestDecodeToTrytesErr(t *testing.T) {
-	var tests = []*struct {
-		src trinary.Trytes
-		err error
-	}{
-		{"A", ErrInvalidLength},
-		{"TE", ErrInvalidTrits},
-		{"FV", ErrInvalidTrits},
-		{"MM", ErrInvalidTrits},
-		{"NN", ErrInvalidTrits},
-		{"LI", ErrInvalidTrits},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.src, func(t *testing.T) {
-			dst, err := DecodeTrytes(tt.src)
+	for _, tt := range errTests {
+		t.Run(tt.trytes, func(t *testing.T) {
+			dst, err := DecodeTrytes(tt.trytes)
 			assert.Truef(t, errors.Is(err, tt.err), "unexpected error: %v", err)
-			assert.Zero(t, dst)
+			assert.Equal(t, tt.bytes, dst)
 		})
 	}
 }
@@ -125,24 +124,27 @@ func BenchmarkEncode(b *testing.B) {
 	}
 	b.ResetTimer()
 
+	dst := make(trinary.Trits, EncodedLen(200))
 	for i := range data {
-		_ = EncodeToTrytes(data[i])
+		_ = Encode(dst, data[i])
 	}
 }
 
 func BenchmarkDecode(b *testing.B) {
-	data := make([]trinary.Trytes, b.N)
+	data := make([]trinary.Trits, b.N)
 	for i := range data {
 		tmp := make([]byte, 200)
 		if _, err := rand.Read(tmp); err != nil {
 			b.Fatal(err)
 		}
-		data[i] = EncodeToTrytes(tmp)
+		data[i] = make(trinary.Trits, EncodedLen(200))
+		Encode(data[i], tmp)
 	}
 	b.ResetTimer()
 
+	dst := make([]byte, 200)
 	for i := range data {
-		_, _ = DecodeTrytes(data[i])
+		_, _ = Decode(dst, data[i])
 	}
 }
 
