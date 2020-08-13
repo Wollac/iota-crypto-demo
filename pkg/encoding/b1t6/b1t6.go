@@ -19,7 +19,7 @@ const (
 // EncodedLen returns the trit-length of an encoding of n source bytes.
 func EncodedLen(n int) int { return n * tritsPerByte }
 
-// Encode encodes src into EncodedLen(len(in)) trits of dst.  As a convenience, it returns the number of trits written,
+// Encode encodes src into EncodedLen(len(in)) trits of dst. As a convenience, it returns the number of trits written,
 // but this value is always EncodedLen(len(src)).
 // Encode implements the b1t6 encoding converting a bit string into ternary.
 func Encode(dst trinary.Trits, src []byte) int {
