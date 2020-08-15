@@ -109,42 +109,8 @@ func TestDecodeToTrytesErr(t *testing.T) {
 		t.Run(tt.trytes, func(t *testing.T) {
 			dst, err := DecodeTrytes(tt.trytes)
 			assert.Truef(t, errors.Is(err, tt.err), "unexpected error: %v", err)
-			assert.Equal(t, tt.bytes, dst)
+			assert.Zero(t, dst)
 		})
-	}
-}
-
-func BenchmarkEncode(b *testing.B) {
-	data := make([][]byte, b.N)
-	for i := range data {
-		data[i] = make([]byte, 200)
-		if _, err := rand.Read(data[i]); err != nil {
-			b.Fatal(err)
-		}
-	}
-	b.ResetTimer()
-
-	dst := make(trinary.Trits, EncodedLen(200))
-	for i := range data {
-		_ = Encode(dst, data[i])
-	}
-}
-
-func BenchmarkDecode(b *testing.B) {
-	data := make([]trinary.Trits, b.N)
-	for i := range data {
-		tmp := make([]byte, 200)
-		if _, err := rand.Read(tmp); err != nil {
-			b.Fatal(err)
-		}
-		data[i] = make(trinary.Trits, EncodedLen(200))
-		Encode(data[i], tmp)
-	}
-	b.ResetTimer()
-
-	dst := make([]byte, 200)
-	for i := range data {
-		_, _ = Decode(dst, data[i])
 	}
 }
 
@@ -154,4 +120,66 @@ func decodeHex(s string) []byte {
 		panic(err)
 	}
 	return dst
+}
+
+var (
+	benchBytesLen = 1000
+	benchTritsLen = EncodedLen(benchBytesLen)
+)
+
+func BenchmarkEncode(b *testing.B) {
+	data := make([][]byte, b.N)
+	for i := range data {
+		data[i] = randomBytes(benchBytesLen)
+	}
+	b.ResetTimer()
+
+	dst := make(trinary.Trits, benchTritsLen)
+	for i := range data {
+		_ = Encode(dst, data[i])
+	}
+}
+
+func BenchmarkEncodeToTrytes(b *testing.B) {
+	data := make([][]byte, b.N)
+	for i := range data {
+		data[i] = randomBytes(benchBytesLen)
+	}
+	b.ResetTimer()
+
+	for i := range data {
+		_ = EncodeToTrytes(data[i])
+	}
+}
+
+func BenchmarkDecode(b *testing.B) {
+	data := make([]trinary.Trits, b.N)
+	for i := range data {
+		data[i] = make(trinary.Trits, benchTritsLen)
+		Encode(data[i], randomBytes(benchBytesLen))
+	}
+	b.ResetTimer()
+
+	dst := make([]byte, benchBytesLen)
+	for i := range data {
+		_, _ = Decode(dst, data[i])
+	}
+}
+
+func BenchmarkDecodeTrytes(b *testing.B) {
+	data := make([]trinary.Trytes, b.N)
+	for i := range data {
+		data[i] = EncodeToTrytes(randomBytes(benchBytesLen))
+	}
+	b.ResetTimer()
+
+	for i := range data {
+		_, _ = DecodeTrytes(data[i])
+	}
+}
+
+func randomBytes(n int) []byte {
+	result := make([]byte, n)
+	rand.Read(result)
+	return result
 }

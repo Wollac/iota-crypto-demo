@@ -73,17 +73,19 @@ func TestDecodeErr(t *testing.T) {
 	}
 }
 
+var (
+	benchBytesLen = 1000
+	benchTritsLen = EncodedLen(benchBytesLen)
+)
+
 func BenchmarkEncode(b *testing.B) {
 	data := make([][]byte, b.N)
 	for i := range data {
-		data[i] = make([]byte, 200)
-		if _, err := rand.Read(data[i]); err != nil {
-			b.Fatal(err)
-		}
+		data[i] = randomBytes(benchBytesLen)
 	}
 	b.ResetTimer()
 
-	dst := make(trinary.Trits, EncodedLen(200))
+	dst := make(trinary.Trits, benchTritsLen)
 	for i := range data {
 		_ = Encode(dst, data[i])
 	}
@@ -92,17 +94,19 @@ func BenchmarkEncode(b *testing.B) {
 func BenchmarkDecode(b *testing.B) {
 	data := make([]trinary.Trits, b.N)
 	for i := range data {
-		tmp := make([]byte, 200)
-		if _, err := rand.Read(tmp); err != nil {
-			b.Fatal(err)
-		}
-		data[i] = make(trinary.Trits, EncodedLen(200))
-		Encode(data[i], tmp)
+		data[i] = make(trinary.Trits, benchTritsLen)
+		Encode(data[i], randomBytes(benchBytesLen))
 	}
 	b.ResetTimer()
 
-	dst := make([]byte, 200)
+	dst := make([]byte, benchBytesLen)
 	for i := range data {
 		_, _ = Decode(dst, data[i])
 	}
+}
+
+func randomBytes(n int) []byte {
+	result := make([]byte, n)
+	rand.Read(result)
+	return result
 }

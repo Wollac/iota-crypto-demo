@@ -25,7 +25,7 @@ func EncodedLen(n int) int { return n * tritsPerByte }
 func Encode(dst trinary.Trits, src []byte) int {
 	j := 0
 	for i := range src {
-		t1, t2 := encodeChunk(src[i])
+		t1, t2 := encodeGroup(src[i])
 		trinary.MustPutTryteTrits(dst[j:], t1)
 		trinary.MustPutTryteTrits(dst[j+3:], t2)
 		j += 6
@@ -39,7 +39,7 @@ func EncodeToTrytes(src []byte) trinary.Trytes {
 	dst.Grow(EncodedLen(len(src)) / consts.TritsPerTryte)
 
 	for i := range src {
-		t1, t2 := encodeChunk(src[i])
+		t1, t2 := encodeGroup(src[i])
 		dst.WriteByte(trinary.MustTryteValueToTryte(t1))
 		dst.WriteByte(trinary.MustTryteValueToTryte(t2))
 	}
@@ -64,7 +64,7 @@ func Decode(dst []byte, src trinary.Trits) (int, error) {
 	for j := 0; j <= len(src)-tritsPerByte; j += tritsPerByte {
 		t1 := MustTritsToTryteValue(src[j:])
 		t2 := MustTritsToTryteValue(src[j+3:])
-		b, ok := decodeChunk(t1, t2)
+		b, ok := decodeGroup(t1, t2)
 		if !ok {
 			return i, fmt.Errorf("%w: %v", ErrInvalidTrits, src[j:j+6])
 		}
@@ -86,29 +86,29 @@ func DecodeTrytes(src trinary.Trytes) ([]byte, error) {
 	for j := 0; j <= len(src)-trytesPerByte; j += trytesPerByte {
 		t1 := trinary.MustTryteToTryteValue(src[j])
 		t2 := trinary.MustTryteToTryteValue(src[j+1])
-		b, ok := decodeChunk(t1, t2)
+		b, ok := decodeGroup(t1, t2)
 		if !ok {
-			return dst[:i], fmt.Errorf("%w: %s", ErrInvalidTrits, src[j:j+2])
+			return nil, fmt.Errorf("%w: %s", ErrInvalidTrits, src[j:j+2])
 		}
 		dst[i] = b
 		i++
 	}
 	if len(src)%trytesPerByte != 0 {
-		return dst[:i], ErrInvalidLength
+		return nil, ErrInvalidLength
 	}
 	return dst, nil
 }
 
-// encodeChunk converts a byte into two tryte values.
-func encodeChunk(b byte) (int8, int8) {
+// encodeGroup converts a byte into two tryte values.
+func encodeGroup(b byte) (int8, int8) {
 	// this is equivalent to: IntToTrytes(int8(in[i]), 2)
 	v := int(int8(b)) + (consts.TryteRadix/2)*consts.TryteRadix + consts.TryteRadix/2 // make un-balanced
 	quo, rem := v/consts.TryteRadix, v%consts.TryteRadix
 	return int8(rem + consts.MinTryteValue), int8(quo + consts.MinTryteValue)
 }
 
-// decodeChunk converts two tryte values into a byte and a success flag.
-func decodeChunk(t1, t2 int8) (byte, bool) {
+// decodeGroup converts two tryte values into a byte and a success flag.
+func decodeGroup(t1, t2 int8) (byte, bool) {
 	v := int(t1) + int(t2)*consts.TryteRadix
 	if v < math.MinInt8 || v > math.MaxInt8 {
 		return 0, false
