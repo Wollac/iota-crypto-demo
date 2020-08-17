@@ -23,8 +23,8 @@ var (
 )
 
 const (
-	NonceBytes = 8
-	nonceTrits = NonceBytes * 8
+	nonceBytes = 8     // len(uint64)
+	nonceTrits = 6 * 8 // b1t6.EncodedLen(nonceBytes)
 )
 
 // Hash identifies a cryptographic hash function that is implemented in another package.
@@ -53,23 +53,20 @@ func New(hash Hash, numWorkers ...int) *Worker {
 }
 
 // PoW returns the ID and the proof-of-work score of the message.
-func (w *Worker) PoW(msg []byte) (id [32]byte, x float64) {
+func (w *Worker) PoW(msg []byte) float64 {
 	h := w.hash.New()
-	dataLen := len(msg) - NonceBytes
+	dataLen := len(msg) - nonceBytes
 	// the PoW digest is the hash of msg without the nonce
 	h.Write(msg[:dataLen])
 	powDigest := h.Sum(nil)
-	// the message ID is the hash of msg including the nonce
-	h.Write(msg[dataLen:])
-	h.Sum(id[:0])
 
 	// extract the nonce from msg and compute the number of trailing zeros
 	nonce := binary.LittleEndian.Uint64(msg[dataLen:])
 	zeros := trailingZeros(powDigest, nonce)
 
-	x = math.Pow(3, float64(zeros))
+	x := math.Pow(consts.TrinaryRadix, float64(zeros))
 	x /= float64(len(msg))
-	return
+	return x
 }
 
 // Mine performs the PoW for data.
@@ -125,9 +122,9 @@ func (w *Worker) Mine(ctx context.Context, data []byte, targetZeros int) (uint64
 }
 
 func trailingZeros(powDigest []byte, nonce uint64) int {
-	buf := make(trinary.Trits, consts.HashTrinarySize)
-	b1t6.Encode(buf, powDigest)
-	// set nonce in the buffer
+	// convert the digest to ternary
+	buf := encodeDigest(powDigest)
+	// set nonce in the trit buffer, the trits between digest and nonce will remain 0
 	encodeNonce(buf[consts.HashTrinarySize-nonceTrits:], nonce)
 
 	c := curl.NewCurlP81()
@@ -137,8 +134,8 @@ func trailingZeros(powDigest []byte, nonce uint64) int {
 }
 
 func (w *Worker) worker(powDigest []byte, startNonce uint64, target int, done *uint32, counter *uint64) (uint64, error) {
-	buf := make(trinary.Trits, consts.HashTrinarySize)
-	b1t6.Encode(buf, powDigest)
+	// convert the digest to ternary
+	buf := encodeDigest(powDigest)
 
 	c := curl.NewCurlP81()
 	nonceBuf := buf[consts.HashTrinarySize-nonceTrits:]
@@ -158,12 +155,19 @@ func (w *Worker) worker(powDigest []byte, startNonce uint64, target int, done *u
 	return 0, ErrDone
 }
 
+func encodeDigest(digest []byte) trinary.Trits {
+	if b1t6.EncodedLen(len(digest)) > consts.HashTrinarySize-nonceTrits {
+		panic("pow: digest is too long")
+	}
+	// allocate exactly one block for Curl
+	buf := make(trinary.Trits, consts.HashTrinarySize)
+	b1t6.Encode(buf, digest)
+	return buf
+}
+
 // encodeNonce encodes nonce as 64 trits using the b1t8 encoding.
 func encodeNonce(dst trinary.Trits, nonce uint64) {
-	if len(dst) < 64 {
-		panic(consts.ErrInvalidTritsLength)
-	}
-	for i := 0; i < 64; i++ {
-		dst[i] = int8((nonce >> i) & 1)
-	}
+	var nonceBuf [nonceBytes]byte
+	binary.LittleEndian.PutUint64(nonceBuf[:], nonce)
+	b1t6.Encode(dst, nonceBuf[:])
 }
