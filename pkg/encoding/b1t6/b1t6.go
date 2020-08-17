@@ -1,4 +1,5 @@
-// Package b1t6 implements the b1t6 encoding encoding as specified by IOTA Protocol RFC-0015.
+// Package b1t6 implements the b1t6 encoding encoding which uses a group of 6 trits to encode each byte.
+// See the IOTA protocol RFC-0015 for details.
 package b1t6
 
 import (
@@ -27,7 +28,7 @@ func Encode(dst trinary.Trits, src []byte) int {
 	for i := range src {
 		t1, t2 := encodeGroup(src[i])
 		trinary.MustPutTryteTrits(dst[j:], t1)
-		trinary.MustPutTryteTrits(dst[j+3:], t2)
+		trinary.MustPutTryteTrits(dst[j+consts.TritsPerTryte:], t2)
 		j += 6
 	}
 	return j
@@ -63,7 +64,7 @@ func Decode(dst []byte, src trinary.Trits) (int, error) {
 	i := 0
 	for j := 0; j <= len(src)-tritsPerByte; j += tritsPerByte {
 		t1 := MustTritsToTryteValue(src[j:])
-		t2 := MustTritsToTryteValue(src[j+3:])
+		t2 := MustTritsToTryteValue(src[j+consts.TritsPerTryte:])
 		b, ok := decodeGroup(t1, t2)
 		if !ok {
 			return i, fmt.Errorf("%w: %v", ErrInvalidTrits, src[j:j+6])
@@ -101,7 +102,7 @@ func DecodeTrytes(src trinary.Trytes) ([]byte, error) {
 
 // encodeGroup converts a byte into two tryte values.
 func encodeGroup(b byte) (int8, int8) {
-	// this is equivalent to: IntToTrytes(int8(in[i]), 2)
+	// this is equivalent to: IntToTrytes(int8(b), 2)
 	v := int(int8(b)) + (consts.TryteRadix/2)*consts.TryteRadix + consts.TryteRadix/2 // make un-balanced
 	quo, rem := v/consts.TryteRadix, v%consts.TryteRadix
 	return int8(rem + consts.MinTryteValue), int8(quo + consts.MinTryteValue)
@@ -118,7 +119,7 @@ func decodeGroup(t1, t2 int8) (byte, bool) {
 
 // MustTritsToTryteValue converts a slice of 3 into its corresponding value.
 // It performs no validation on the provided inputs (therefore might return an invalid representation) and might panic.
-// TODO: This function should be moved to github.com/iotaledger/iota.go/trinary
+// TODO: Use trinary.MustTritsToTryteValue when the iota.go PR has been merged.
 func MustTritsToTryteValue(trits trinary.Trits) int8 {
 	_ = trits[2] // bounds check hint to compiler
 	return trits[0] + trits[1]*3 + trits[2]*9

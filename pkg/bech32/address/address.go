@@ -85,7 +85,7 @@ func ParseBech32(s string) (Prefix, Address, error) {
 		if err != nil {
 			return 0, nil, fmt.Errorf("invalid WOTS address: %w", err)
 		}
-		addr, err := WOTSAddress(hash)
+		addr, err := WOTSAddress(hash[:consts.HashTrytesSize])
 		if err != nil {
 			return 0, nil, fmt.Errorf("invalid wotsAddress address: %w", err)
 		}

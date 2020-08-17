@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"math"
 	"math/rand"
 	"strings"
 	"testing"
@@ -71,28 +72,28 @@ func TestDecodeToTrytes(t *testing.T) {
 			dst, err := DecodeToTrytes(tt.bytes)
 			if assert.NoError(t, err) {
 				// add expected padding
-				padLend := (((len(tt.trytes)*3+tritsInByte-1)/tritsInByte)*tritsInByte)/3 - (len(tt.trytes))
-				expDec := trinary.MustPad(tt.trytes, len(tt.trytes)+padLend)
-				assert.Equal(t, expDec, dst)
+				paddedTritLen := DecodedLen(EncodedLen(len(tt.trytes) * consts.TritsPerTryte))
+				paddedTryteLen := int(math.Ceil(float64(paddedTritLen) / consts.TritsPerTryte))
+				assert.Equal(t, trinary.MustPad(tt.trytes, paddedTryteLen), dst)
 			}
 		})
 	}
 }
 
-func TestDecodeErr(t *testing.T) {
-	var tests = []*struct {
-		bytes []byte
-		trits trinary.Trits
-		err   error
-	}{
-		{[]byte{0x7a}, []int8{}, consts.ErrInvalidByte},
-		{[]byte{0x80}, []int8{}, consts.ErrInvalidByte},
-		{[]byte{0x86}, []int8{}, consts.ErrInvalidByte},
-		{[]byte{0x79, 0x7a}, []int8{1, 1, 1, 1, 1}, consts.ErrInvalidByte},
-		{[]byte{0x00, 0x01, 0x7a}, []int8{0, 0, 0, 0, 0, 1, 0, 0, 0, 0}, consts.ErrInvalidByte},
-	}
+var errTests = []*struct {
+	bytes []byte
+	trits trinary.Trits
+	err   error
+}{
+	{[]byte{0x7a}, []int8{}, consts.ErrInvalidByte},
+	{[]byte{0x80}, []int8{}, consts.ErrInvalidByte},
+	{[]byte{0x86}, []int8{}, consts.ErrInvalidByte},
+	{[]byte{0x79, 0x7a}, []int8{1, 1, 1, 1, 1}, consts.ErrInvalidByte},
+	{[]byte{0x00, 0x01, 0x7a}, []int8{0, 0, 0, 0, 0, 1, 0, 0, 0, 0}, consts.ErrInvalidByte},
+}
 
-	for _, tt := range tests {
+func TestDecodeErr(t *testing.T) {
+	for _, tt := range errTests {
 		t.Run(fmt.Sprintf("%x", tt.bytes), func(t *testing.T) {
 			dst := make(trinary.Trits, DecodedLen(len(tt.bytes))+10)
 			n, err := Decode(dst, tt.bytes)
@@ -103,22 +104,7 @@ func TestDecodeErr(t *testing.T) {
 }
 
 func TestDecodeToTrytesErr(t *testing.T) {
-	var tests = []*struct {
-		bytes []byte
-		err   error
-	}{
-		{[]byte{0x7a}, consts.ErrInvalidByte},
-		{[]byte{0x80}, consts.ErrInvalidByte},
-		{[]byte{0x86}, consts.ErrInvalidByte},
-		{[]byte{0x79, 0x7a}, consts.ErrInvalidByte},
-		{[]byte{0x00, 0x01, 0x7a}, consts.ErrInvalidByte},
-		{[]byte{0x5e}, ErrNonZeroPadding}, // 1, 1, 1, 0, 1
-		{[]byte{0xc1}, ErrNonZeroPadding}, // 1, 1, 1, 0, -1
-		{[]byte{0x28}, ErrNonZeroPadding}, //1, 1, 1, 1, 0
-		{[]byte{0xf2}, ErrNonZeroPadding}, // 1, 1, 1, -1, 0
-	}
-
-	for _, tt := range tests {
+	for _, tt := range errTests {
 		t.Run(fmt.Sprintf("%x", tt.bytes), func(t *testing.T) {
 			dst, err := DecodeToTrytes(tt.bytes)
 			assert.Truef(t, errors.Is(err, tt.err), "unexpected error: %v", err)

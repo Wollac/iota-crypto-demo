@@ -1,10 +1,8 @@
-// Package t5b1 implements the t5b1 encoding which uses one byte to represent each 5-trit group.
+// Package t5b1 implements the t5b1 encoding encoding which uses one byte to represent each 5-trit group.
 package t5b1
 
 import (
-	"errors"
 	"fmt"
-	"math/bits"
 
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/trinary"
@@ -78,7 +76,7 @@ func Encode(dst []byte, src trinary.Trits) int {
 		if len(src) < tritsInByte {
 			var v int
 			for j := len(src) - 1; j >= 0; j-- {
-				v = v*3 + int(src[j])
+				v = v*consts.TrinaryRadix + int(src[j])
 			}
 			dst[i] = byte(v)
 			return i + 1
@@ -102,9 +100,6 @@ func EncodeTrytes(src trinary.Trytes) []byte {
 	Encode(dst, trinary.MustTrytesToTrits(src))
 	return dst
 }
-
-// ErrNonZeroPadding reports an attempt to decode an input without zero padding.
-var ErrNonZeroPadding = errors.New("non-zero padding")
 
 // DecodedLen returns the trit-length of a decoding of n source bytes.
 func DecodedLen(n int) int { return n * tritsInByte }
@@ -130,23 +125,15 @@ func Decode(dst trinary.Trits, src []byte) (int, error) {
 	return j, nil
 }
 
-// DecodeToTrytes returns the trytes represented by the t5b1 encoded bytes.
+// DecodeToTrytes returns the trytes represented by the t5b1 encoded bytes. The returned trytes always
+// have a length of Ceil(DecodedLen(len(src))/3).
 // DecodeToTrytes expects that src contains a valid t5b1 encoding of a tryte-string.
 // If the input is malformed or does not contain the correct zero padding, it returns an error.
 func DecodeToTrytes(src []byte) (trinary.Trytes, error) {
-	trits := make(trinary.Trits, DecodedLen(len(src)))
+	trytesLen := (DecodedLen(len(src)) + consts.TritsPerTryte - 1) / consts.TritsPerTryte
+	trits := make(trinary.Trits, trytesLen*consts.TritsPerTryte)
 	if _, err := Decode(trits, src); err != nil {
 		return "", err
 	}
-	padLength := len(trits) % consts.TritsPerTryte
-	if padLength > 0 && trailingZerosInLastTwoTrits(trits) < padLength {
-		return "", ErrNonZeroPadding
-	}
-	return trinary.MustTritsToTrytes(trits[:len(trits)-padLength]), nil
-}
-
-// counts the number of trailing zeros in the last two trits of t.
-func trailingZerosInLastTwoTrits(t trinary.Trits) int {
-	v := 1<<2 | (uint(t[len(t)-2])&1)<<1 | (uint(t[len(t)-1]) & 1)
-	return bits.TrailingZeros(v) // will be translated to a single instruction
+	return trinary.MustTritsToTrytes(trits), nil
 }
