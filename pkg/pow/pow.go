@@ -23,8 +23,7 @@ var (
 )
 
 const (
-	nonceBytes = 8     // len(uint64)
-	nonceTrits = 6 * 8 // b1t6.EncodedLen(nonceBytes)
+	nonceBytes = 8 // len(uint64)
 )
 
 // Hash identifies a cryptographic hash function that is implemented in another package.
@@ -122,10 +121,11 @@ func (w *Worker) Mine(ctx context.Context, data []byte, targetZeros int) (uint64
 }
 
 func trailingZeros(powDigest []byte, nonce uint64) int {
-	// convert the digest to ternary
-	buf := encodeDigest(powDigest)
-	// set nonce in the trit buffer, the trits between digest and nonce will remain 0
-	encodeNonce(buf[consts.HashTrinarySize-nonceTrits:], nonce)
+	// allocate exactly one block for Curl
+	buf := make(trinary.Trits, consts.HashTrinarySize)
+	b1t6.Encode(buf, powDigest)
+	// add nonce to the trit buffer
+	encodeNonce(buf[b1t6.EncodedLen(len(powDigest)):], nonce)
 
 	c := curl.NewCurlP81()
 	_ = c.Absorb(buf)
@@ -134,11 +134,12 @@ func trailingZeros(powDigest []byte, nonce uint64) int {
 }
 
 func (w *Worker) worker(powDigest []byte, startNonce uint64, target int, done *uint32, counter *uint64) (uint64, error) {
-	// convert the digest to ternary
-	buf := encodeDigest(powDigest)
+	// allocate exactly one block for Curl
+	buf := make(trinary.Trits, consts.HashTrinarySize)
+	b1t6.Encode(buf, powDigest)
 
 	c := curl.NewCurlP81()
-	nonceBuf := buf[consts.HashTrinarySize-nonceTrits:]
+	nonceBuf := buf[b1t6.EncodedLen(len(powDigest)):]
 	for nonce := startNonce; atomic.LoadUint32(done) == 0; nonce++ {
 		atomic.AddUint64(counter, 1)
 
@@ -153,16 +154,6 @@ func (w *Worker) worker(powDigest []byte, startNonce uint64, target int, done *u
 		}
 	}
 	return 0, ErrDone
-}
-
-func encodeDigest(digest []byte) trinary.Trits {
-	if b1t6.EncodedLen(len(digest)) > consts.HashTrinarySize-nonceTrits {
-		panic("pow: digest is too long")
-	}
-	// allocate exactly one block for Curl
-	buf := make(trinary.Trits, consts.HashTrinarySize)
-	b1t6.Encode(buf, digest)
-	return buf
 }
 
 // encodeNonce encodes nonce as 64 trits using the b1t8 encoding.

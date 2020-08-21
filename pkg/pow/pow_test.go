@@ -42,8 +42,8 @@ func TestWorker_Validate(t *testing.T) {
 		expPoW float64
 	}{
 		{msg: []byte{0, 0, 0, 0, 0, 0, 0, 0}, expPoW: math.Pow(3, 1) / 8},
-		{msg: []byte{240, 179, 0, 0, 0, 0, 0, 0}, expPoW: math.Pow(3, 10) / 8},
-		{msg: []byte{9, 119, 100, 85, 85, 85, 85, 213}, expPoW: math.Pow(3, 15) / 8},
+		{msg: []byte{203, 124, 2, 0, 0, 0, 0, 0}, expPoW: math.Pow(3, 10) / 8},
+		{msg: []byte{65, 235, 119, 85, 85, 85, 85, 85}, expPoW: math.Pow(3, 14) / 8},
 		{msg: make([]byte, 10000), expPoW: math.Pow(3, 0) / 10000},
 	}
 
