@@ -1,174 +1,163 @@
 package wots
 
 import (
-	"bytes"
-	"crypto/rand"
-	"encoding/binary"
 	"hash"
 	"io"
 	"math/big"
 
+	"github.com/iotaledger/iota.go/consts"
+	"github.com/iotaledger/iota.go/kerl"
 	"github.com/iotaledger/iota.go/kerl/sha3"
+	"github.com/iotaledger/iota.go/signing"
+	"github.com/iotaledger/iota.go/trinary"
+	"github.com/wollac/iota-crypto-demo/pkg/encoding/t5b1"
 )
 
 const (
-	// PublicKeySize is the size, in bytes, of public keys as used in this package.
-	PublicKeySize = 48
-	// PrivateKeySize is the size, in bytes, of private keys as used in this package.
-	PrivateKeySize = fragmentLength * 48
-	// SignatureSize is the size, in bytes, of signatures generated and verified by this package.
-	SignatureSize = PrivateKeySize
+	// NonceSize is the size, in bytes, of the nonce used to randomize the message hash.
+	NonceSize = 16
 )
 
-const fragmentLength = 27
-
-type PrivateKey []byte
-
-type PublicKey []byte
-
-// Public returns the PublicKey corresponding to priv.
-func (k PrivateKey) Public() PublicKey {
+var (
+	// a cryptographic hash function to compute the message hash
+	newDigestHash = sha3.NewLegacyKeccak384
 	// a one-way function for the W-OTS chain
-	f := sha3.NewLegacyKeccak384()
+	newChainHash = kerl.NewKerl
+)
 
-	key := k
-	digest := make([]byte, 0, len(k))
-	fragment := make([]byte, 48)
-	for len(key) >= 48 {
-		copy(fragment, key)
-		for j := 0; j < 27-1; j++ {
-			f.Reset()
-			f.Write(fragment)
-			f.Sum(fragment[:0])
-		}
-		key = key[48:]
-		digest = append(digest, fragment...)
+// Sign signs the message using privateKey. It returns the signature together with a random nonce.
+// The security of the signature depends on the entropy of rand.
+func Sign(rand io.Reader, privateKey trinary.Trits, message []byte) (nonce [NonceSize]byte, sig []byte, err error) {
+	if len(privateKey)%consts.KeyFragmentLength != 0 {
+		err = consts.ErrInvalidTritsLength
+		return
+	}
+	securityLevel := len(privateKey) / consts.KeyFragmentLength
+	if securityLevel < 1 || securityLevel > consts.MaxSecurityLevel {
+		err = consts.ErrInvalidSecurityLevel
+		return
 	}
 
-	// the public key is the hash of the digest
-	publicKey := make([]byte, PublicKeySize)
-	f.Reset()
-	f.Write(digest)
-	f.Sum(publicKey[:0])
-	return publicKey
+	// create a random nonce and compute the hash
+	_, err = io.ReadFull(rand, nonce[:])
+	if err != nil {
+		return
+	}
+	msgHash := messageHash(newDigestHash, nonce[:], message)
+
+	h := newChainHash()
+	sigTrits := make(trinary.Trits, 0, securityLevel*consts.KeyFragmentLength)
+	for i := 0; i < securityLevel; i++ {
+		// generate the signed signature fragment by supplying the correct
+		// parts of the normalized bundle hash and private key
+		frag, err := signing.SignatureFragment(
+			msgHash[i*consts.KeySegmentsPerFragment:(i+1)*consts.KeySegmentsPerFragment],
+			privateKey[i*consts.KeyFragmentLength:(i+1)*consts.KeyFragmentLength],
+			h,
+		)
+		if err != nil {
+			return [NonceSize]byte{}, nil, err
+		}
+		sigTrits = append(sigTrits, frag...)
+	}
+	sig = make([]byte, t5b1.EncodedLen(len(sigTrits)))
+	t5b1.Encode(sig, sigTrits)
+	return
 }
 
-func GenerateKey(r io.Reader) (PrivateKey, error) {
-	if r == nil {
-		r = rand.Reader
+// Verify verifies the signature in nonce,sig of message by publicKey using address.
+func Verify(address trinary.Trits, message []byte, nonce [NonceSize]byte, sig []byte) bool {
+	sigTrits := make(trinary.Trits, t5b1.DecodedLen(len(sig)))
+	if _, err := t5b1.Decode(sigTrits, sig); err != nil {
+		return false
 	}
-
-	privateKey := make([]byte, PrivateKeySize)
-	if _, err := io.ReadFull(r, privateKey); err != nil {
-		return nil, err
-	}
-
-	return privateKey, nil
-}
-
-// Sign signs the message digest fragment with the corresponding fragIdx and returns the nonce an the signature.
-func Sign(key PrivateKey, fragIdx int, message []byte) (uint64, []byte) {
-	// a cryptographic hash function for the message digest
-	g := sha3.NewLegacyKeccak384()
-
-	var (
-		base27 []int
-		nonce  uint64
-	)
-	// find a nonce so that the message digest is normalized
-	for {
-		base27 = messageDigest(g, message, nonce)[fragIdx*fragmentLength : (fragIdx+1)*fragmentLength]
-		if isNormalize(base27) {
-			break
-		}
-		nonce++
-	}
-
-	// a one-way function for the W-OTS chain
-	f := sha3.NewLegacyKeccak384()
-
-	signature := make([]byte, 0, SignatureSize)
-	fragment := make([]byte, 48)
-	for i := 0; len(key) >= 48; i++ {
-		copy(fragment, key)
-		for j := 0; j < base27[i]; j++ {
-			f.Reset()
-			f.Write(fragment)
-			f.Sum(fragment[:0])
-		}
-		key = key[48:]
-		signature = append(signature, fragment...)
-	}
-
-	return nonce, signature
-}
-
-func Verify(publicKey PublicKey, fragIdx int, message []byte, nonce uint64, sig []byte) bool {
-	// a cryptographic hash function for the message digest
-	g := sha3.NewLegacyKeccak384()
-	base27 := messageDigest(g, message, nonce)[fragIdx*fragmentLength : (fragIdx+1)*fragmentLength]
-	if !isNormalize(base27) {
+	// signature must have the correct zero padding
+	if len(sigTrits)%consts.KeyFragmentLength > 4 ||
+		trinary.TrailingZeros(sigTrits) < len(sigTrits)%consts.KeyFragmentLength {
 		return false
 	}
 
-	// a one-way function for the W-OTS chain
-	f := sha3.NewLegacyKeccak384()
-
-	digest := make([]byte, 0, SignatureSize)
-	fragment := make([]byte, 48)
-	for i := 0; len(sig) >= 48; i++ {
-		copy(fragment, sig)
-		for j := base27[i]; j < 27-1; j++ {
-			f.Reset()
-			f.Write(fragment)
-			f.Sum(fragment[:0])
-		}
-
-		sig = sig[48:]
-		digest = append(digest, fragment...)
+	numFragments := len(sigTrits) / consts.KeyFragmentLength
+	maxFragment := consts.MaxSecurityLevel
+	if numFragments < maxFragment {
+		maxFragment = numFragments
 	}
 
-	// the public key is the hash of the digest
-	checkPub := make([]byte, PublicKeySize)
-	f.Reset()
-	f.Write(digest)
-	f.Sum(checkPub[:0])
-	return bytes.Equal(publicKey, checkPub)
+	// compute the message hash with the given nonce
+	msgHash := messageHash(newDigestHash, nonce[:], message)
+
+	h := newChainHash()
+	digests := make(trinary.Trits, 0, len(sigTrits)/consts.KeyFragmentLength*consts.HashTrinarySize)
+	for i := 0; i < len(sigTrits)/consts.KeyFragmentLength; i++ {
+		// for longer signatures (multisig) cycle through the hash fragments to compute the digest
+		frag := i % (consts.HashTrytesSize / consts.KeySegmentsPerFragment)
+		digest, err := signing.Digest(
+			msgHash[frag*consts.KeySegmentsPerFragment:(frag+1)*consts.KeySegmentsPerFragment],
+			sigTrits[i*consts.KeyFragmentLength:(i+1)*consts.KeyFragmentLength],
+			h,
+		)
+		if err != nil {
+			return false
+		}
+		digests = append(digests, digest...)
+	}
+
+	addressTrits, err := signing.Address(digests, h)
+	if err != nil {
+		return false
+	}
+	equal, _ := trinary.TritsEqual(address, addressTrits)
+	return equal
+}
+
+// messageHash computes the message hash. The provided f must not be vulnerable to length extension attacks.
+func messageHash(f func() hash.Hash, key, message []byte) []int8 {
+	h := f()
+	// for modern hash functions like Keccak h(k||m) is a secure MAC
+	h.Write(key)
+	h.Write(message)
+	d := h.Sum(nil)
+
+	hash := base27(d, consts.HashTrytesSize)
+	for i := 0; i < consts.HashTrytesSize/consts.KeySegmentsPerFragment; i++ {
+		normalizeBase27(hash[i*consts.KeySegmentsPerFragment : (i+1)*consts.KeySegmentsPerFragment])
+	}
+	return hash
 }
 
 var big27 = big.NewInt(27)
 
-// computes the base27 message digest
-func messageDigest(h hash.Hash, message []byte, nonce uint64) []int {
-	defer h.Reset()
+// base27 converts m to its base-27 representation of length l.
+// It returns a slice where is element is in [-13, 13].
+func base27(m []byte, l int) []int8 {
+	result := make([]int8, l)
 
-	// hash the message together with the nonce
-	h.Write(message)
-	var nonceBytes [8]byte
-	binary.LittleEndian.PutUint64(nonceBytes[:], nonce)
-	h.Write(nonceBytes[:])
-
-	digest := h.Sum(nil)
-
-	// convert to base27
-	bigInt := new(big.Int).SetBytes(digest[:])
-	base27 := make([]int, fragmentLength)
-
+	b := new(big.Int).SetBytes(m)
 	rem := new(big.Int)
-	for i := range base27 {
-		bigInt.QuoRem(bigInt, big27, rem)
-		base27[i] = int(rem.Uint64())
+	for i := 0; i < l; i++ {
+		b.QuoRem(b, big27, rem)
+		result[i] = int8(rem.Uint64()) - consts.MaxTryteValue
 	}
-	return base27
+	return result
 }
 
-func isNormalize(base27 []int) bool {
-	var sum int
-	for _, x := range base27 {
-		sum += x
+func normalizeBase27(fragmentTryteValues []int8) {
+	sum := 0
+	for i := range fragmentTryteValues {
+		sum += int(fragmentTryteValues[i])
 	}
-	if sum == 13*len(base27) {
-		return true
+
+	for i := range fragmentTryteValues {
+		v := int(fragmentTryteValues[i]) - sum
+		if v < consts.MinTryteValue {
+			sum = consts.MinTryteValue - v
+			fragmentTryteValues[i] = consts.MinTryteValue
+		} else if v > consts.MaxTryteValue {
+			sum = consts.MaxTryteValue - v
+			fragmentTryteValues[i] = consts.MaxTryteValue
+		} else {
+			fragmentTryteValues[i] = int8(v)
+			break
+		}
 	}
-	return false
 }

@@ -1,55 +1,78 @@
 package wots
 
 import (
-	"math/rand"
+	"crypto/rand"
 	"testing"
 
+	"github.com/iotaledger/iota.go/consts"
+	"github.com/iotaledger/iota.go/signing"
+	"github.com/iotaledger/iota.go/signing/key"
+	"github.com/iotaledger/iota.go/trinary"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/wollac/iota-crypto-demo/pkg/encoding/t5b1"
+)
+
+const (
+	seed          = "ZLNM9UHJWKTTDEZOTH9CXDEIFUJQCIACDPJIXPOWBDW9LTBHC9AQRIXTIHYLIIURLZCXNSTGNIVC9ISVB"
+	securityLevel = 3
 )
 
 func TestVerify(t *testing.T) {
-	message := []byte("hello, world!")
+	priv, address := generateKey(seed, securityLevel)
+	assert.Len(t, priv, securityLevel*consts.KeyFragmentLength)
+	assert.Len(t, address, consts.HashTrinarySize)
 
-	key, err := GenerateKey(nil)
-	require.NoError(t, err)
-	assert.Len(t, key, PrivateKeySize)
+	message := []byte("testing")
+	nonce, sig, err := Sign(rand.Reader, priv, message)
+	assert.Len(t, nonce, NonceSize)
+	assert.Len(t, sig, t5b1.EncodedLen(securityLevel*consts.SignatureMessageFragmentTrinarySize))
+	assert.NoError(t, err)
 
-	nonce, signature := Sign(key, 0, message)
-	assert.Len(t, signature, SignatureSize)
-	t.Log(nonce, signature)
-
-	pub := key.Public()
-	assert.Len(t, pub, PublicKeySize)
-	valid := Verify(pub, 0, message, nonce, signature)
+	valid := Verify(address, message, nonce, sig)
 	assert.True(t, valid)
 
-	// create an invalid signature
-	invalidSig := append([]byte{}, signature...)
-	invalidSig[0]++
-
-	invalid := Verify(pub, 0, message, nonce, invalidSig)
-	assert.False(t, invalid)
+	// create an invalid signatures
+	invalidSig := append([]byte{}, sig...)
+	invalidSig[0] = sig[0] + 1
+	assert.False(t, Verify(address, message, nonce, invalidSig))
+	invalidSig[0] = sig[0] - 1
+	assert.False(t, Verify(address, message, nonce, invalidSig))
 }
 
 func BenchmarkVerify(b *testing.B) {
-	type foo struct {
+	type datum struct {
+		nonce     [NonceSize]byte
 		message   []byte
-		nonce     uint64
 		signature []byte
 	}
-	key, _ := GenerateKey(nil)
-	pub := key.Public()
-	data := make([]foo, b.N)
+	private, public := generateKey(seed, 2)
+	data := make([]datum, b.N)
 	for i := range data {
 		message := make([]byte, 300)
 		rand.Read(message)
-		data[i].nonce, data[i].signature = Sign(key, 0, message)
+		data[i].nonce, data[i].signature, _ = Sign(rand.Reader, private, message)
 		data[i].message = message
 	}
 	b.ResetTimer()
 
 	for i := range data {
-		_ = Verify(pub, 0, data[i].message, data[i].nonce, data[i].signature)
+		_ = Verify(public, data[i].message, data[i].nonce, data[i].signature)
 	}
+}
+
+func generateKey(seed trinary.Trytes, securityLevel int) (trinary.Trits, trinary.Trits) {
+	entropy, err := trinary.TrytesToTrits(seed)
+	if err != nil {
+		panic(err)
+	}
+	private, err := key.Shake(entropy, consts.SecurityLevel(securityLevel))
+	if err != nil {
+		panic(err)
+	}
+	digests, err := signing.Digests(append(trinary.Trits{}, private...))
+	if err != nil {
+		panic(err)
+	}
+	public, _ := signing.Address(digests)
+	return private, public
 }
