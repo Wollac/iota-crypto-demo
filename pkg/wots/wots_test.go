@@ -5,74 +5,80 @@ import (
 	"testing"
 
 	"github.com/iotaledger/iota.go/consts"
-	"github.com/iotaledger/iota.go/signing"
-	"github.com/iotaledger/iota.go/signing/key"
 	"github.com/iotaledger/iota.go/trinary"
 	"github.com/stretchr/testify/assert"
-	"github.com/wollac/iota-crypto-demo/pkg/encoding/t5b1"
+	"github.com/stretchr/testify/require"
 )
 
 const (
-	seed          = "ZLNM9UHJWKTTDEZOTH9CXDEIFUJQCIACDPJIXPOWBDW9LTBHC9AQRIXTIHYLIIURLZCXNSTGNIVC9ISVB"
-	securityLevel = 3
+	seed                               = "ZLNM9UHJWKTTDEZOTH9CXDEIFUJQCIACDPJIXPOWBDW9LTBHC9AQRIXTIHYLIIURLZCXNSTGNIVC9ISVB"
+	securityLevel consts.SecurityLevel = 3
 )
 
 func TestVerify(t *testing.T) {
-	priv, address := generateKey(seed, securityLevel)
-	assert.Len(t, priv, securityLevel*consts.KeyFragmentLength)
-	assert.Len(t, address, consts.HashTrinarySize)
+	priv, err := GenerateKey(trinary.MustTrytesToTrits(seed), securityLevel)
+	require.NoError(t, err)
+	assert.Len(t, priv, int(securityLevel)*consts.KeyFragmentLength)
 
 	message := []byte("testing")
 	nonce, sig, err := Sign(rand.Reader, priv, message)
+	require.NoError(t, err)
 	assert.Len(t, nonce, NonceSize)
-	assert.Len(t, sig, t5b1.EncodedLen(securityLevel*consts.SignatureMessageFragmentTrinarySize))
-	assert.NoError(t, err)
+	assert.Len(t, sig, int(securityLevel)*consts.KeyFragmentLength)
+	t.Logf("nonce:%x signature:%v", nonce, sig)
+
+	address := priv.Address()
+	assert.Len(t, address, consts.HashTrinarySize)
 
 	valid := Verify(address, message, nonce, sig)
 	assert.True(t, valid)
 
-	// create an invalid signatures
-	invalidSig := append([]byte{}, sig...)
-	invalidSig[0] = sig[0] + 1
+	// create invalid signatures
+	invalidSig := append(trinary.Trits{}, sig...)
+	if invalidSig[0] < 1 {
+		invalidSig[0] = 1
+	} else {
+		invalidSig[0] = -1
+	}
 	assert.False(t, Verify(address, message, nonce, invalidSig))
-	invalidSig[0] = sig[0] - 1
-	assert.False(t, Verify(address, message, nonce, invalidSig))
+}
+
+func TestSignatureEncoding(t *testing.T) {
+	priv, err := GenerateKey(trinary.MustTrytesToTrits(seed), securityLevel)
+	require.NoError(t, err)
+
+	message := []byte("testing")
+	_, sig, err := Sign(rand.Reader, priv, message)
+	require.NoError(t, err)
+
+	data, err := sig.MarshalBinary()
+	require.NoError(t, err)
+
+	sig2 := Signature{}
+	err = sig2.UnmarshalBinary(data)
+	require.NoError(t, err)
+
+	assert.Equal(t, sig, sig2)
 }
 
 func BenchmarkVerify(b *testing.B) {
 	type datum struct {
-		nonce     [NonceSize]byte
 		message   []byte
-		signature []byte
+		nonce     [NonceSize]byte
+		signature Signature
 	}
-	private, public := generateKey(seed, 2)
+	priv, _ := GenerateKey(trinary.MustTrytesToTrits(seed), 2)
 	data := make([]datum, b.N)
 	for i := range data {
-		message := make([]byte, 300)
+		message := make([]byte, 1600)
 		rand.Read(message)
-		data[i].nonce, data[i].signature, _ = Sign(rand.Reader, private, message)
+		data[i].nonce, data[i].signature, _ = Sign(rand.Reader, priv, message)
 		data[i].message = message
 	}
+	address := priv.Address()
 	b.ResetTimer()
 
 	for i := range data {
-		_ = Verify(public, data[i].message, data[i].nonce, data[i].signature)
+		_ = Verify(address, data[i].message, data[i].nonce, data[i].signature)
 	}
-}
-
-func generateKey(seed trinary.Trytes, securityLevel int) (trinary.Trits, trinary.Trits) {
-	entropy, err := trinary.TrytesToTrits(seed)
-	if err != nil {
-		panic(err)
-	}
-	private, err := key.Shake(entropy, consts.SecurityLevel(securityLevel))
-	if err != nil {
-		panic(err)
-	}
-	digests, err := signing.Digests(append(trinary.Trits{}, private...))
-	if err != nil {
-		panic(err)
-	}
-	public, _ := signing.Address(digests)
-	return private, public
 }

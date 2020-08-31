@@ -1,14 +1,16 @@
 package wots
 
 import (
+	"fmt"
 	"hash"
 	"io"
-	"math/big"
+	"math/bits"
 
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/kerl"
 	"github.com/iotaledger/iota.go/kerl/sha3"
 	"github.com/iotaledger/iota.go/signing"
+	"github.com/iotaledger/iota.go/signing/key"
 	"github.com/iotaledger/iota.go/trinary"
 	"github.com/wollac/iota-crypto-demo/pkg/encoding/t5b1"
 )
@@ -25,9 +27,79 @@ var (
 	newChainHash = kerl.NewKerl
 )
 
+// PrivateKey is the type of W-OTS private keys.
+type PrivateKey trinary.Trits
+
+// GenerateKey creates a private key.
+func GenerateKey(entropy trinary.Trits, securityLevel consts.SecurityLevel) (PrivateKey, error) {
+	return key.Shake(entropy, securityLevel)
+}
+
+// Address returns the public key address corresponding to privateKey.
+func (privateKey PrivateKey) Address() trinary.Trits {
+	// copy the private key before passing it to Digests
+	digests, err := signing.Digests(append(trinary.Trits{}, privateKey...))
+	if err != nil {
+		panic(err)
+	}
+	address, _ := signing.Address(digests)
+	return address
+}
+
+// String returns a human readable version of the PrivateKey.
+func (privateKey PrivateKey) String() string {
+	return trinary.MustTritsToTrytes(privateKey)
+}
+
+// Signature is the type of W-OTS signatures.
+type Signature trinary.Trits
+
+// String returns a human readable version of the Signature.
+func (sig Signature) String() string {
+	return trinary.MustTritsToTrytes(sig)
+}
+
+// MarshalBinary implements the encoding.BinaryMarshaler interface.
+func (sig Signature) MarshalBinary() (data []byte, err error) {
+	tmp := make(trinary.Trits, 0, len(sig)/consts.HashTrinarySize*(consts.HashTrinarySize-1))
+	for frag := sig; len(frag) >= consts.HashTrinarySize; frag = frag[consts.HashTrinarySize:] {
+		tmp = append(tmp, frag[:consts.HashTrinarySize-1]...)
+	}
+	b := make([]byte, t5b1.EncodedLen(len(tmp)))
+	t5b1.Encode(b, tmp)
+	return b, nil
+}
+
+// UnmarshalBinary implements the encoding.BinaryUnmarshaler interface.
+func (sig *Signature) UnmarshalBinary(data []byte) error {
+	buf := make(trinary.Trits, t5b1.DecodedLen(len(data)))
+	if _, err := t5b1.Decode(buf, data); err != nil {
+		return fmt.Errorf("invalid signature: %w", err)
+	}
+	// signature must have the correct zero padding
+	if rem := len(buf) % (consts.HashTrinarySize - 1); rem >= 5 || trailingZeros(buf) < rem {
+		return fmt.Errorf("invalid signature padding: %v", buf[len(buf)-rem:])
+	}
+
+	*sig = make(trinary.Trits, 0, len(buf)/(consts.HashTrinarySize-1)*consts.HashTrinarySize)
+	for len(buf) >= consts.HashTrinarySize-1 {
+		*sig = append(*sig, buf[:consts.HashTrinarySize-1]...)
+		*sig = append(*sig, 0) // insert missing 0 trit
+		buf = buf[consts.HashTrinarySize-1:]
+	}
+	return nil
+}
+
+// counts the number of trailing zeros up to 5
+func trailingZeros(t trinary.Trits) int {
+	n := len(t) - 1
+	v := 1<<5 | (uint(t[n-4])&1)<<4 | (uint(t[n-3])&1)<<3 | (uint(t[n-2])&1)<<2 | (uint(t[n-1])&1)<<1 | (uint(t[n]) & 1)
+	return bits.TrailingZeros(v)
+}
+
 // Sign signs the message using privateKey. It returns the signature together with a random nonce.
 // The security of the signature depends on the entropy of rand.
-func Sign(rand io.Reader, privateKey trinary.Trits, message []byte) (nonce [NonceSize]byte, sig []byte, err error) {
+func Sign(rand io.Reader, privateKey PrivateKey, message []byte) (nonce [NonceSize]byte, sig Signature, err error) {
 	if len(privateKey)%consts.KeyFragmentLength != 0 {
 		err = consts.ErrInvalidTritsLength
 		return
@@ -46,7 +118,7 @@ func Sign(rand io.Reader, privateKey trinary.Trits, message []byte) (nonce [Nonc
 	msgHash := messageHash(newDigestHash, nonce[:], message)
 
 	h := newChainHash()
-	sigTrits := make(trinary.Trits, 0, securityLevel*consts.KeyFragmentLength)
+	sig = make(trinary.Trits, 0, securityLevel*consts.KeyFragmentLength)
 	for i := 0; i < securityLevel; i++ {
 		// generate the signed signature fragment by supplying the correct
 		// parts of the normalized bundle hash and private key
@@ -56,28 +128,19 @@ func Sign(rand io.Reader, privateKey trinary.Trits, message []byte) (nonce [Nonc
 			h,
 		)
 		if err != nil {
-			return [NonceSize]byte{}, nil, err
+			return [16]byte{}, nil, err
 		}
-		sigTrits = append(sigTrits, frag...)
+		sig = append(sig, frag...)
 	}
-	sig = make([]byte, t5b1.EncodedLen(len(sigTrits)))
-	t5b1.Encode(sig, sigTrits)
 	return
 }
 
 // Verify verifies the signature in nonce,sig of message by publicKey using address.
-func Verify(address trinary.Trits, message []byte, nonce [NonceSize]byte, sig []byte) bool {
-	sigTrits := make(trinary.Trits, t5b1.DecodedLen(len(sig)))
-	if _, err := t5b1.Decode(sigTrits, sig); err != nil {
+func Verify(address trinary.Trits, message []byte, nonce [NonceSize]byte, sig Signature) bool {
+	if len(sig)%consts.KeyFragmentLength != 0 {
 		return false
 	}
-	// signature must have the correct zero padding
-	if len(sigTrits)%consts.KeyFragmentLength > 4 ||
-		trinary.TrailingZeros(sigTrits) < len(sigTrits)%consts.KeyFragmentLength {
-		return false
-	}
-
-	numFragments := len(sigTrits) / consts.KeyFragmentLength
+	numFragments := len(sig) / consts.KeyFragmentLength
 	maxFragment := consts.MaxSecurityLevel
 	if numFragments < maxFragment {
 		maxFragment = numFragments
@@ -87,13 +150,13 @@ func Verify(address trinary.Trits, message []byte, nonce [NonceSize]byte, sig []
 	msgHash := messageHash(newDigestHash, nonce[:], message)
 
 	h := newChainHash()
-	digests := make(trinary.Trits, 0, len(sigTrits)/consts.KeyFragmentLength*consts.HashTrinarySize)
-	for i := 0; i < len(sigTrits)/consts.KeyFragmentLength; i++ {
+	digests := make(trinary.Trits, 0, len(sig)/consts.KeyFragmentLength*consts.HashTrinarySize)
+	for i := 0; i < len(sig)/consts.KeyFragmentLength; i++ {
 		// for longer signatures (multisig) cycle through the hash fragments to compute the digest
 		frag := i % (consts.HashTrytesSize / consts.KeySegmentsPerFragment)
 		digest, err := signing.Digest(
 			msgHash[frag*consts.KeySegmentsPerFragment:(frag+1)*consts.KeySegmentsPerFragment],
-			sigTrits[i*consts.KeyFragmentLength:(i+1)*consts.KeyFragmentLength],
+			sig[i*consts.KeyFragmentLength:(i+1)*consts.KeyFragmentLength],
 			h,
 		)
 		if err != nil {
@@ -116,48 +179,7 @@ func messageHash(f func() hash.Hash, key, message []byte) []int8 {
 	// for modern hash functions like Keccak h(k||m) is a secure MAC
 	h.Write(key)
 	h.Write(message)
-	d := h.Sum(nil)
-
-	hash := base27(d, consts.HashTrytesSize)
-	for i := 0; i < consts.HashTrytesSize/consts.KeySegmentsPerFragment; i++ {
-		normalizeBase27(hash[i*consts.KeySegmentsPerFragment : (i+1)*consts.KeySegmentsPerFragment])
-	}
-	return hash
-}
-
-var big27 = big.NewInt(27)
-
-// base27 converts m to its base-27 representation of length l.
-// It returns a slice where is element is in [-13, 13].
-func base27(m []byte, l int) []int8 {
-	result := make([]int8, l)
-
-	b := new(big.Int).SetBytes(m)
-	rem := new(big.Int)
-	for i := 0; i < l; i++ {
-		b.QuoRem(b, big27, rem)
-		result[i] = int8(rem.Uint64()) - consts.MaxTryteValue
-	}
-	return result
-}
-
-func normalizeBase27(fragmentTryteValues []int8) {
-	sum := 0
-	for i := range fragmentTryteValues {
-		sum += int(fragmentTryteValues[i])
-	}
-
-	for i := range fragmentTryteValues {
-		v := int(fragmentTryteValues[i]) - sum
-		if v < consts.MinTryteValue {
-			sum = consts.MinTryteValue - v
-			fragmentTryteValues[i] = consts.MinTryteValue
-		} else if v > consts.MaxTryteValue {
-			sum = consts.MaxTryteValue - v
-			fragmentTryteValues[i] = consts.MaxTryteValue
-		} else {
-			fragmentTryteValues[i] = int8(v)
-			break
-		}
-	}
+	d, _ := kerl.KerlBytesToTrytes(h.Sum(nil))
+	// return the normalized hash
+	return signing.NormalizedBundleHash(d)
 }
