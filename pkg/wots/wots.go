@@ -7,12 +7,12 @@ import (
 	"math/bits"
 
 	"github.com/iotaledger/iota.go/consts"
+	"github.com/iotaledger/iota.go/encoding/t5b1"
 	"github.com/iotaledger/iota.go/kerl"
 	"github.com/iotaledger/iota.go/kerl/sha3"
 	"github.com/iotaledger/iota.go/signing"
 	"github.com/iotaledger/iota.go/signing/key"
 	"github.com/iotaledger/iota.go/trinary"
-	"github.com/wollac/iota-crypto-demo/pkg/encoding/t5b1"
 )
 
 const (
