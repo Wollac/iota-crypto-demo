@@ -65,19 +65,7 @@ func (e *ellipticCurve) PrivateKey(interKey []byte, parentKey []byte) ([]byte, e
 
 func (e *ellipticCurve) PublicKey(key *Key) []byte {
 	x, y := e.ScalarBaseMult(key.Key)
-	return marshallCompressed(e, x, y)
-}
-
-// marshallCompressed converts a point into the compressed form specified in section 2.3.3 in SEC1.
-func marshallCompressed(curve elliptic.Curve, x, y *big.Int) []byte {
-	byteLen := (curve.Params().BitSize + 7) >> 3
-
-	result := make([]byte, 1+byteLen)
-	result[0] = byte(0x2) + byte(y.Bit(0))
-
-	xBytes := x.Bytes()
-	copy(result[1+byteLen-len(xBytes):], xBytes)
-	return result
+	return elliptic.MarshalCompressed(e, x, y)
 }
 
 type secp256k1Curve struct {
@@ -114,14 +102,14 @@ func (ed25519Curve) ValidateChildIndex(index uint32) error {
 	return nil
 }
 
-func (ed25519Curve) PrivateKey(interKey []byte, parentKey []byte) ([]byte, error) {
+func (ed25519Curve) PrivateKey(interKey []byte, _ []byte) ([]byte, error) {
 	return interKey, nil
 }
 
 func (ed25519Curve) PublicKey(key *Key) []byte {
+	public, _ := Ed25519Key(key)
 	// match the required public key size
 	result := make([]byte, PublicKeySize)
-	public := ed25519crypt.NewKeyFromSeed(key.Key).Public().(ed25519crypt.PublicKey)
 	copy(result[PublicKeySize-len(public):], public)
 	return result
 }
@@ -143,4 +131,10 @@ func Nist256p1() Curve {
 // Ed25519 returns a Curve which implements the Ed25519 signature algorithm. See https://ed25519.cr.yp.to/.
 func Ed25519() Curve {
 	return ed25519
+}
+
+// Ed25519Key computes the crypto/ed25519 public/private key pair from the given SLIP-0010 extended private key.
+func Ed25519Key(key *Key) (ed25519crypt.PublicKey, ed25519crypt.PrivateKey) {
+	privateKey := ed25519crypt.NewKeyFromSeed(key.Key)
+	return privateKey.Public().(ed25519crypt.PublicKey), privateKey
 }
