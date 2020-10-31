@@ -3,17 +3,19 @@ package pow
 
 import (
 	"context"
+	"crypto"
 	"encoding/binary"
 	"errors"
-	"hash"
 	"math"
 	"sync"
 	"sync/atomic"
 
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/curl"
+	"github.com/iotaledger/iota.go/curl/bct"
+	"github.com/iotaledger/iota.go/encoding/b1t6"
 	"github.com/iotaledger/iota.go/trinary"
-	"github.com/wollac/iota-crypto-demo/pkg/encoding/b1t6"
+	_ "golang.org/x/crypto/blake2b" // BLAKE2b_256 is the default hash function for the PoW digest
 )
 
 // errors returned by the PoW
@@ -22,27 +24,22 @@ var (
 	ErrDone      = errors.New("done")
 )
 
+// Hash defines the hash function that is used to compute the PoW digest.
+var Hash = crypto.BLAKE2b_256
+
+// The Worker provides PoW functionality.
+type Worker struct {
+	numWorkers int
+}
+
 const (
 	nonceBytes = 8 // len(uint64)
 )
 
-// Hash identifies a cryptographic hash function that is implemented in another package.
-type Hash interface {
-	// New returns a new hash.Hash calculating the given hash function.
-	New() hash.Hash
-}
-
-// The Worker provides PoW functionality using an arbitrary hash function.
-type Worker struct {
-	hash       Hash
-	numWorkers int
-}
-
 // New creates a new PoW based on the provided hash.
 // The optional numWorkers specifies how many go routines are used to mine.
-func New(hash Hash, numWorkers ...int) *Worker {
+func New(numWorkers ...int) *Worker {
 	w := &Worker{
-		hash:       hash,
 		numWorkers: 1,
 	}
 	if len(numWorkers) > 0 && numWorkers[0] > 0 {
@@ -52,8 +49,8 @@ func New(hash Hash, numWorkers ...int) *Worker {
 }
 
 // PoW returns the ID and the proof-of-work score of the message.
-func (w *Worker) PoW(msg []byte) float64 {
-	h := w.hash.New()
+func PoW(msg []byte) float64 {
+	h := Hash.New()
 	dataLen := len(msg) - nonceBytes
 	// the PoW digest is the hash of msg without the nonce
 	h.Write(msg[:dataLen])
@@ -80,7 +77,7 @@ func (w *Worker) Mine(ctx context.Context, data []byte, targetZeros int) (uint64
 		closing = make(chan struct{})
 	)
 
-	h := w.hash.New()
+	h := Hash.New()
 	h.Write(data)
 	powDigest := h.Sum(nil)
 
@@ -121,36 +118,55 @@ func (w *Worker) Mine(ctx context.Context, data []byte, targetZeros int) (uint64
 }
 
 func trailingZeros(powDigest []byte, nonce uint64) int {
-	// allocate exactly one block for Curl
+	// allocate exactly one Curl block
 	buf := make(trinary.Trits, consts.HashTrinarySize)
-	b1t6.Encode(buf, powDigest)
-	// add nonce to the trit buffer
-	encodeNonce(buf[b1t6.EncodedLen(len(powDigest)):], nonce)
+	n := b1t6.Encode(buf, powDigest)
+	// add the nonce to the trit buffer
+	encodeNonce(buf[n:], nonce)
 
 	c := curl.NewCurlP81()
-	_ = c.Absorb(buf)
+	if err := c.Absorb(buf); err != nil {
+		panic(err)
+	}
 	digest, _ := c.Squeeze(consts.HashTrinarySize)
 	return trinary.TrailingZeros(digest)
 }
 
 func (w *Worker) worker(powDigest []byte, startNonce uint64, target int, done *uint32, counter *uint64) (uint64, error) {
-	// allocate exactly one block for Curl
-	buf := make(trinary.Trits, consts.HashTrinarySize)
-	b1t6.Encode(buf, powDigest)
+	// use batched Curl hashing
+	c := bct.NewCurlP81()
+	hashes := make([]trinary.Trits, bct.MaxBatchSize)
 
-	c := curl.NewCurlP81()
-	nonceBuf := buf[b1t6.EncodedLen(len(powDigest)):]
-	for nonce := startNonce; atomic.LoadUint32(done) == 0; nonce++ {
-		atomic.AddUint64(counter, 1)
+	// allocate exactly one Curl block for each batch index and fill it with the encoded digest
+	buf := make([]trinary.Trits, bct.MaxBatchSize)
+	for i := range buf {
+		buf[i] = make(trinary.Trits, consts.HashTrinarySize)
+		b1t6.Encode(buf[i], powDigest)
+	}
 
-		// update nonce in the last block
-		encodeNonce(nonceBuf, nonce)
+	digestTritsLen := b1t6.EncodedLen(len(powDigest))
+	for nonce := startNonce; atomic.LoadUint32(done) == 0; nonce += bct.MaxBatchSize {
+		// add the nonce to each trit buffer
+		for i := range buf {
+			nonceBuf := buf[i][digestTritsLen:]
+			encodeNonce(nonceBuf, nonce+uint64(i))
+		}
 
+		// process the batch
 		c.Reset()
-		_ = c.Absorb(buf)
-		digest, _ := c.Squeeze(consts.HashTrinarySize)
-		if trinary.TrailingZeros(digest) >= target {
-			return nonce, nil
+		if err := c.Absorb(buf, consts.HashTrinarySize); err != nil {
+			return 0, err
+		}
+		if err := c.Squeeze(hashes, consts.HashTrinarySize); err != nil {
+			return 0, err
+		}
+		atomic.AddUint64(counter, bct.MaxBatchSize)
+
+		// check each hash, whether it has the sufficient amount of trailing zeros
+		for i := range hashes {
+			if trinary.TrailingZeros(hashes[i]) >= target {
+				return nonce + uint64(i), nil
+			}
 		}
 	}
 	return 0, ErrDone

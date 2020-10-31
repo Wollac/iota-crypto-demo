@@ -21,10 +21,10 @@ import (
 
 const (
 	workers = 2
-	target  = 6
+	target  = 10
 )
 
-var testWorker = New(crypto.BLAKE2b_256, workers)
+var testWorker = New(workers)
 
 func TestWorker_Mine(t *testing.T) {
 	msg := append([]byte("Hello, World!"), make([]byte, nonceBytes)...)
@@ -32,11 +32,11 @@ func TestWorker_Mine(t *testing.T) {
 	require.NoError(t, err)
 
 	binary.LittleEndian.PutUint64(msg[len(msg)-nonceBytes:], nonce)
-	pow := testWorker.PoW(msg)
+	pow := PoW(msg)
 	assert.GreaterOrEqual(t, pow, math.Pow(3, target)/float64(len(msg)))
 }
 
-func TestWorker_Validate(t *testing.T) {
+func TestWorker_PoW(t *testing.T) {
 	tests := []*struct {
 		msg    []byte
 		expPoW float64
@@ -48,7 +48,7 @@ func TestWorker_Validate(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		pow := testWorker.PoW(tt.msg)
+		pow := PoW(tt.msg)
 		assert.Equal(t, tt.expPoW, pow)
 	}
 }
@@ -80,7 +80,7 @@ func BenchmarkPoW(b *testing.B) {
 	b.ResetTimer()
 
 	for i := range data {
-		_ = testWorker.PoW(data[i])
+		_ = PoW(data[i])
 	}
 }
 
@@ -107,7 +107,7 @@ func BenchmarkCurlPoW(b *testing.B) {
 
 func BenchmarkWorker(b *testing.B) {
 	var (
-		w       = New(crypto.BLAKE2b_256, 1)
+		w       = New(1)
 		digest  = make([]byte, crypto.BLAKE2b_256.Size())
 		done    uint32
 		counter uint64
