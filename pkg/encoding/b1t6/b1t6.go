@@ -63,8 +63,8 @@ func DecodedLen(n int) int { return n / tritsPerByte }
 func Decode(dst []byte, src trinary.Trits) (int, error) {
 	i := 0
 	for j := 0; j <= len(src)-tritsPerByte; j += tritsPerByte {
-		t1 := MustTritsToTryteValue(src[j:])
-		t2 := MustTritsToTryteValue(src[j+consts.TritsPerTryte:])
+		t1 := trinary.MustTritsToTryteValue(src[j:])
+		t2 := trinary.MustTritsToTryteValue(src[j+consts.TritsPerTryte:])
 		b, ok := decodeGroup(t1, t2)
 		if !ok {
 			return i, fmt.Errorf("%w: %v", ErrInvalidTrits, src[j:j+6])
@@ -115,12 +115,4 @@ func decodeGroup(t1, t2 int8) (byte, bool) {
 		return 0, false
 	}
 	return byte(v), true
-}
-
-// MustTritsToTryteValue converts a slice of 3 into its corresponding value.
-// It performs no validation on the provided inputs (therefore might return an invalid representation) and might panic.
-// TODO: Use trinary.MustTritsToTryteValue when the iota.go PR has been merged.
-func MustTritsToTryteValue(trits trinary.Trits) int8 {
-	_ = trits[2] // bounds check hint to compiler
-	return trits[0] + trits[1]*3 + trits[2]*9
 }
