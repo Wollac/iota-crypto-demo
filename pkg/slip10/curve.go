@@ -134,7 +134,11 @@ func Ed25519() Curve {
 }
 
 // Ed25519Key computes the crypto/ed25519 public/private key pair from the given SLIP-0010 extended private key.
+// It panics when the key is not based on Ed25519.
 func Ed25519Key(key *Key) (ed25519crypt.PublicKey, ed25519crypt.PrivateKey) {
+	if key.curve != ed25519 {
+		panic("non-ed25519 curve")
+	}
 	privateKey := ed25519crypt.NewKeyFromSeed(key.Key)
 	return privateKey.Public().(ed25519crypt.PublicKey), privateKey
 }
