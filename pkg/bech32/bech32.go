@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/wollac/iota-crypto-demo/pkg/bech32/base32"
+	"github.com/wollac/iota-crypto-demo/pkg/bech32/internal/base32"
 )
 
 const (
@@ -15,13 +15,14 @@ const (
 	separator       = '1'
 )
 
-var charset = "qpzry9x8gf2tvdw0s3jn54khce6mua7l"
+var charset = newEncoding("qpzry9x8gf2tvdw0s3jn54khce6mua7l")
 
 // Encode encodes the String string and the src data as a Bech32 string.
 // It returns an error when the input is invalid.
 func Encode(hrp string, src []byte) (string, error) {
-	if len(hrp)+base32.EncodedLen(len(src))+checksumLength+1 > maxStringLength {
-		return "", fmt.Errorf("%w: String length=%d, data length=%d", ErrInvalidLength, len(hrp), base32.EncodedLen(len(src)))
+	dataLen := base32.EncodedLen(len(src))
+	if len(hrp)+dataLen+checksumLength+1 > maxStringLength {
+		return "", fmt.Errorf("%w: String length=%d, data length=%d", ErrInvalidLength, len(hrp), dataLen)
 	}
 	// validate the human-readable part
 	if len(hrp) < 1 {
@@ -39,18 +40,19 @@ func Encode(hrp string, src []byte) (string, error) {
 	// convert the human-readable part to lower for the checksum
 	hrpLower := strings.ToLower(hrp)
 
-	// encode the data part and add the checksum
-	data := make([]byte, base32.EncodedLen(len(src))+checksumLength)
-	dataLen := base32.Encode(data, src)
+	// convert to base32 and add the checksum
+	data := make([]uint8, base32.EncodedLen(len(src))+checksumLength)
+	base32.Encode(data, src)
 	copy(data[dataLen:], bech32CreateChecksum(hrpLower, data[:dataLen]))
+
+	// enc the data part using the charset
+	chars := charset.encode(data)
 
 	// convert to a string using the corresponding charset
 	var res strings.Builder
 	res.WriteString(hrp)
 	res.WriteByte(separator)
-	for _, v := range data {
-		res.WriteByte(charset[v])
-	}
+	res.WriteString(chars)
 
 	// return with the correct case
 	if hrp == hrpLower {
@@ -88,16 +90,14 @@ func Decode(s string) (string, []byte, error) {
 	// convert everything to lower
 	s = strings.ToLower(s)
 	hrp := s[:hrpLen]
+	chars := s[hrpLen+1:]
 
-	// parse data part
-	var data []byte
-	for i := hrpLen + 1; i < len(s); i++ {
-		v := strings.Index(charset, string(s[i]))
-		if v < 0 {
-			return "", nil, &SyntaxError{fmt.Errorf("%w: non-charset character in data part", ErrInvalidCharacter), i}
-		}
-		data = append(data, byte(v))
+	// decode the data part
+	data, err := charset.decode(chars)
+	if err != nil {
+		return "", nil, &SyntaxError{fmt.Errorf("%w: non-charset character in data part", ErrInvalidCharacter), hrpLen + 1 + len(data)}
 	}
+
 	// validate the checksum
 	if len(data) < checksumLength || !bech32VerifyChecksum(hrp, data) {
 		return "", nil, &SyntaxError{ErrInvalidChecksum, len(s) - checksumLength}

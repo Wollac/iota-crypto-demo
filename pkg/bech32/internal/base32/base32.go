@@ -11,11 +11,11 @@ func EncodedLen(n int) int {
 	return (n*8 + 4) / 5
 }
 
-// Encode encodes src into EncodedLen(len(src)) bytes of dst.
-// As a convenience, it returns the number of bytes written to dst,
+// Encode encodes src into EncodedLen(len(src)) digits of dst.
+// As a convenience, it returns the number of digits written to dst,
 // but this value is always EncodedLen(len(src)).
 // Encode implements base32 encoding.
-func Encode(dst, src []byte) int {
+func Encode(dst []uint8, src []byte) int {
 	n := EncodedLen(len(src))
 	for len(src) > 0 {
 		var carry byte
@@ -82,7 +82,7 @@ func DecodedLen(n int) int {
 
 // Decode decodes src into DecodedLen(len(src)) bytes, returning the actual number of bytes written to dst.
 // If the input is malformed, Decode returns an error and the number of bytes decoded before the error.
-func Decode(dst, src []byte) (int, error) {
+func Decode(dst []byte, src []uint8) (int, error) {
 	written := 0
 	read := 0
 	for len(src) > 0 {
