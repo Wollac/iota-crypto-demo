@@ -10,33 +10,18 @@ import (
 	"testing"
 	"time"
 
-	"github.com/iotaledger/iota.go/consts"
-	"github.com/iotaledger/iota.go/curl"
-	"github.com/iotaledger/iota.go/trinary"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/wollac/iota-crypto-demo/pkg/encoding/b1t6"
-	_ "golang.org/x/crypto/blake2b"
 )
 
 const (
-	workers = 2
-	target  = 10
+	workers     = 2
+	targetScore = 4000.
 )
 
 var testWorker = New(workers)
 
-func TestWorker_Mine(t *testing.T) {
-	msg := append([]byte("Hello, World!"), make([]byte, nonceBytes)...)
-	nonce, err := testWorker.Mine(context.Background(), msg[:len(msg)-nonceBytes], target)
-	require.NoError(t, err)
-
-	binary.LittleEndian.PutUint64(msg[len(msg)-nonceBytes:], nonce)
-	pow := PoW(msg)
-	assert.GreaterOrEqual(t, pow, math.Pow(3, target)/float64(len(msg)))
-}
-
-func TestWorker_PoW(t *testing.T) {
+func TestScore(t *testing.T) {
 	tests := []*struct {
 		msg    []byte
 		expPoW float64
@@ -48,9 +33,20 @@ func TestWorker_PoW(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		pow := PoW(tt.msg)
+		pow := Score(tt.msg)
 		assert.Equal(t, tt.expPoW, pow)
 	}
+}
+
+func TestWorker_Mine(t *testing.T) {
+	msg := append([]byte("Hello, World!"), make([]byte, nonceBytes)...)
+	nonce, err := testWorker.Mine(context.Background(), msg[:len(msg)-nonceBytes], targetScore)
+	require.NoError(t, err)
+
+	// add nonce to message and check the resulting PoW score
+	binary.LittleEndian.PutUint64(msg[len(msg)-nonceBytes:], nonce)
+	pow := Score(msg)
+	assert.GreaterOrEqual(t, pow, targetScore)
 }
 
 func TestWorker_Cancel(t *testing.T) {
@@ -69,7 +65,7 @@ func TestWorker_Cancel(t *testing.T) {
 
 const benchBytesLen = 1600
 
-func BenchmarkPoW(b *testing.B) {
+func BenchmarkScore(b *testing.B) {
 	data := make([][]byte, b.N)
 	for i := range data {
 		data[i] = make([]byte, benchBytesLen)
@@ -80,28 +76,7 @@ func BenchmarkPoW(b *testing.B) {
 	b.ResetTimer()
 
 	for i := range data {
-		_ = PoW(data[i])
-	}
-}
-
-func BenchmarkCurlPoW(b *testing.B) {
-	data := make([][]byte, b.N)
-	for i := range data {
-		data[i] = make([]byte, benchBytesLen)
-		if _, err := rand.Read(data[i]); err != nil {
-			b.Fatal(err)
-		}
-	}
-	b.ResetTimer()
-
-	for i := range data {
-		// convert entire message to trits and pad with zeroes
-		trits := make(trinary.Trits, (b1t6.EncodedLen(benchBytesLen)+242)/243*243)
-		b1t6.Encode(trits, data[i])
-		// compute the Curl-P-81 hash to validate the PoW
-		c := curl.NewCurlP81()
-		_ = c.Absorb(trits)
-		_, _ = c.Squeeze(consts.HashTrinarySize)
+		_ = Score(data[i])
 	}
 }
 
