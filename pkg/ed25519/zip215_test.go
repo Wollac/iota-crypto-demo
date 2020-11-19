@@ -2,7 +2,6 @@ package ed25519
 
 import (
 	"encoding/hex"
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -12,12 +11,10 @@ var message = []byte("Zcash")
 
 func TestZIP215(t *testing.T) {
 	for i, tt := range tests {
-		t.Run(fmt.Sprint(i), func(t *testing.T) {
-			publicKey, _ := hex.DecodeString(tt.pk)
-			sig, _ := hex.DecodeString(tt.s)
+		publicKey, _ := hex.DecodeString(tt.pk)
+		sig, _ := hex.DecodeString(tt.s)
 
-			assert.True(t, Verify(publicKey, message, sig), "failed to verify")
-		})
+		assert.Truef(t, Verify(publicKey, message, sig), "test %d failed to verify", i)
 	}
 }
 
