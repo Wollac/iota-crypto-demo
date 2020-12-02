@@ -14,21 +14,20 @@ import (
 
 // default values
 var (
-	defPrefix = address.Mainnet
-	defWOTS   = func() address.Address {
-		addr, _ := address.WOTSAddress("EQSAUZXULTTYZCLNJNTXQTQHOMOFZERHTCGTXOLTVAHKSA9OGAZDEKECURBRIXIJWNPFCQIOVFVVXJVD9")
+	defPrefix      = address.Mainnet
+	defAddressHash = func() address.Address {
+		addr, _ := address.Ed25519Address([]byte{82, 253, 252, 7, 33, 130, 101, 79, 22, 63, 95, 15, 154, 98, 29, 114, 149, 102, 199, 77, 16, 3, 124, 77, 123, 187, 4, 7, 209, 226, 198, 73})
 		return addr
 	}()
 	defBech32 = func() string {
-		addr, _ := address.Ed25519Address([]byte{82, 253, 252, 7, 33, 130, 101, 79, 22, 63, 95, 15, 154, 98, 29, 114, 149, 102, 199, 77, 16, 3, 124, 77, 123, 187, 4, 7, 209, 226, 198, 73})
-		s, _ := address.Bech32(defPrefix, addr)
+		s, _ := address.Bech32(defPrefix, defAddressHash)
 		return s
 	}()
 )
 
 var (
 	encode       = flag.NewFlagSet("encode", flag.ExitOnError)
-	hashString   = encode.String("hash", defWOTS.String(), "tryte-encoded W-OTS hash or hex-encoded binary hash")
+	hashString   = encode.String("hash", defAddressHash.String(), "tryte-encoded W-OTS hash or hex-encoded binary hash")
 	prefixString = encode.String("prefix", defPrefix.String(), "network prefix")
 
 	decode        = flag.NewFlagSet("decode", flag.ExitOnError)
