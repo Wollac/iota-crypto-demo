@@ -1,0 +1,62 @@
+package main
+
+import (
+	"crypto/ed25519"
+	"crypto/rand"
+	"encoding/hex"
+	"flag"
+	"fmt"
+	"os"
+
+	"github.com/wollac/iota-crypto-demo/pkg/migration"
+	"golang.org/x/crypto/blake2b"
+)
+
+var (
+	ed25519Address = flag.String(
+		"address",
+		"",
+		"Ed25519 address as hex; if empty a new random address is generated",
+	)
+)
+
+func main() {
+	flag.Parse()
+
+	if err := run(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %s\n", err)
+		os.Exit(1)
+	}
+}
+
+func run() (err error) {
+	if len(*ed25519Address) == 0 {
+		*ed25519Address, err = randomAddress()
+		if err != nil {
+			return err
+		}
+	}
+	addressBytes, err := hex.DecodeString(*ed25519Address)
+	if err != nil {
+		return err
+	}
+
+	var addr [32]byte
+	copy(addr[:], addressBytes)
+	migAddr := migration.Encode(addr)
+
+	fmt.Println("==> Migration Address Encoder")
+	fmt.Printf("  Ed25519 address (%d-byte):\t%s\n", len(addr), hex.EncodeToString(addr[:]))
+	fmt.Printf("  Migration address (%d-tryte):\t%s\n", len(migAddr), migAddr)
+
+	return nil
+}
+
+func randomAddress() (string, error) {
+	pub, _, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		return "", err
+	}
+	hash := blake2b.Sum256(pub)
+	return hex.EncodeToString(hash[:]), nil
+}
