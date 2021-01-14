@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/iotaledger/iota.go/checksum"
+	"github.com/iotaledger/iota.go/consts"
 	"github.com/wollac/iota-crypto-demo/pkg/migration"
 	"golang.org/x/crypto/blake2b"
 )
@@ -38,12 +40,15 @@ func run() (err error) {
 	}
 	addressBytes, err := hex.DecodeString(*ed25519Address)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to decode address: %w", err)
 	}
 
 	var addr [32]byte
 	copy(addr[:], addressBytes)
-	migAddr := migration.Encode(addr)
+	migAddr, err := checksum.AddChecksum(migration.Encode(addr), true, consts.AddressChecksumTrytesSize)
+	if err != nil {
+		return fmt.Errorf("failed to compute address checksum: %w", err)
+	}
 
 	fmt.Println("==> Migration Address Encoder")
 	fmt.Printf("  Ed25519 address (%d-byte):\t%s\n", len(addr), hex.EncodeToString(addr[:]))
