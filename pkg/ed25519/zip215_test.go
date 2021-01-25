@@ -1,10 +1,11 @@
-package ed25519
+package ed25519_test
 
 import (
 	"encoding/hex"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/wollac/iota-crypto-demo/pkg/ed25519"
 )
 
 var message = []byte("Zcash")
@@ -14,7 +15,7 @@ func TestZIP215(t *testing.T) {
 		publicKey, _ := hex.DecodeString(tt.pk)
 		sig, _ := hex.DecodeString(tt.s)
 
-		assert.Truef(t, Verify(publicKey, message, sig), "test %d failed to verify", i)
+		assert.Truef(t, ed25519.Verify(publicKey, message, sig), "test %d failed to verify", i)
 	}
 }
 

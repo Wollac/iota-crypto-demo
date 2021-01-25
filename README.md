@@ -3,13 +3,14 @@ This repository contains Go example implementations related to the cryptography 
 
 ## Packages
 It contains the following general packages:
+- `encoding/b1t6` implements the binary-to-ternary encoding as described in the IOTA protocol [RFC-0015](https://github.com/iotaledger/protocol-rfcs/blob/master/text/0015-binary-to-ternary-encoding/0015-binary-to-ternary-encoding.md).
 - `bech32` implements Bech32 addresses based on the format described in [BIP-0173](https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki). 
 - `bip32path` provides utilities for [BIP-0032](https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki) chains.
 - `bip39` implements the [BIP-0039](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) specification and mnemonic [word lists](https://github.com/bitcoin/bips/blob/master/bip-0039/bip-0039-wordlists.md).
+- `ed25519` implements Ed25519 signatures with particular validation rules around edge cases as described in [RFC-0028 draft](https://github.com/iotaledger/protocol-rfcs/pull/28).
 - `merkle` implements the combination of multiple bundle hashes into one Merkle tree as described in the IOTA protocol [RFC-0012](https://github.com/iotaledger/protocol-rfcs/blob/master/text/0012-milestone-merkle-validation/0012-milestone-merkle-validation.md).
 - `pow` implements the Curl-based proof of work for arbitrary binary data as mentioned in [RFC-0017 draft](https://github.com/iotaledger/protocol-rfcs/pull/17).
 - `slip10` implements the [SLIP-0010](https://github.com/satoshilabs/slips/blob/master/slip-0010.md) private key derivation.
-- `encoding/b1t6` implements the binary-to-ternary encoding as described in the IOTA protocol [RFC-0015](https://github.com/iotaledger/protocol-rfcs/blob/master/text/0015-binary-to-ternary-encoding/0015-binary-to-ternary-encoding.md).
 
 All these packages are tested against the full test vectors provided in the corresponding specifications.
 
