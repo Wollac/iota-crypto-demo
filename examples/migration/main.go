@@ -1,7 +1,6 @@
 package main
 
 import (
-	"crypto/ed25519"
 	"crypto/rand"
 	"encoding/hex"
 	"flag"
@@ -10,6 +9,7 @@ import (
 
 	"github.com/iotaledger/iota.go/checksum"
 	"github.com/iotaledger/iota.go/consts"
+	"github.com/wollac/iota-crypto-demo/pkg/ed25519"
 	"github.com/wollac/iota-crypto-demo/pkg/migration"
 	"golang.org/x/crypto/blake2b"
 )

@@ -1,11 +1,11 @@
 package slip10
 
 import (
-	ed25519crypt "crypto/ed25519"
 	"crypto/elliptic"
 	"errors"
 	"math/big"
 
+	ed25519crypt "github.com/wollac/iota-crypto-demo/pkg/ed25519"
 	"github.com/wollac/iota-crypto-demo/pkg/slip10/btccurve"
 )
 
