@@ -1,13 +1,18 @@
 package main
 
 import (
+	"crypto"
+	"encoding"
+	"encoding/hex"
 	"flag"
 	"fmt"
 	"math/bits"
 	"math/rand"
 	"strings"
 
-	merkle "github.com/wollac/iota-crypto-demo/pkg/merkle/pt2"
+	"github.com/wollac/iota-crypto-demo/pkg/merkle"
+
+	_ "golang.org/x/crypto/blake2b" // BLAKE2b_256 is the default hashing algorithm
 )
 
 var (
@@ -18,32 +23,42 @@ var (
 	)
 )
 
+type ID [32]byte
+
+func (i ID) MarshalBinary() ([]byte, error) {
+	return i[:], nil
+}
+
+func (i ID) String() string {
+	return hex.EncodeToString(i[:])
+}
+
 func main() {
 	flag.Parse()
 
-	var ids [][32]byte
+	var data []encoding.BinaryMarshaler
 	for i := 0; i < *numHashes; i++ {
-		ids = append(ids, randomID())
+		data = append(data, randomID())
 	}
 
 	fmt.Println("==> input message ids")
-	for i := range ids {
-		fmt.Printf(" d[%d]: %x\n", i, ids[i])
+	for i := range data {
+		fmt.Printf(" d[%d]: %s\n", i, data[i])
 	}
-	fmt.Printf("\n==> Merkle tree with %d leafs\n", len(ids))
-	printTree(merkle.DefaultHasher, ids)
+	fmt.Printf("\n==> Merkle tree with %d leafs\n", len(data))
+	printTree(merkle.NewHasher(crypto.BLAKE2b_256), data)
 }
 
-func randomID() (p [32]byte) {
-	rand.Read(p[:])
-	return p
+func randomID() (id ID) {
+	rand.Read(id[:])
+	return id
 }
 
 // printTree pretty prints the Merkle tree.
-func printTree(h *merkle.Hasher, ids [][32]byte) {
-	root := h.TreeHash(ids)
+func printTree(h *merkle.Hasher, leafs []encoding.BinaryMarshaler) {
+	root, _ := h.Hash(leafs)
 	fmt.Printf(" root: %x\n", root)
-	printNode(buildTree(h, ids), "")
+	printNode(buildTree(h, leafs), "")
 }
 
 type node struct {
@@ -51,18 +66,20 @@ type node struct {
 	children []*node
 }
 
-func buildTree(h *merkle.Hasher, ids [][32]byte) *node {
-	if len(ids) == 0 {
+func buildTree(h *merkle.Hasher, leafs []encoding.BinaryMarshaler) *node {
+	if len(leafs) == 0 {
 		return &node{text: fmt.Sprintf(" %x", h.EmptyRoot())}
 	}
-	if len(ids) == 1 {
-		return &node{text: fmt.Sprintf(" ┌ msg id: %x\n─┴ leaf: %x", ids[0], h.HashLeaf(ids[0]))}
+	if len(leafs) == 1 {
+		leafHash, _ := h.Hash([]encoding.BinaryMarshaler{leafs[0]})
+		return &node{text: fmt.Sprintf(" ┌ msg id: %s\n─┴ leaf: %x", leafs[0], leafHash)}
 	}
 	// largest power of two less than n, i.e. k < n <= 2k
-	k := 1 << (bits.Len(uint(len(ids)-1)) - 1)
-	l, r := ids[:k], ids[k:]
+	k := 1 << (bits.Len(uint(len(leafs)-1)) - 1)
+	l, r := leafs[:k], leafs[k:]
+	nodeHash, _ := h.Hash(leafs)
 	return &node{
-		text:     fmt.Sprintf(" node: %x", h.HashNode(h.TreeHash(l), h.TreeHash(r))),
+		text:     fmt.Sprintf(" node: %x", nodeHash),
 		children: []*node{buildTree(h, l), buildTree(h, r)},
 	}
 }

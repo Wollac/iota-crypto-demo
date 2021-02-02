@@ -5,16 +5,9 @@ package merkle
 
 import (
 	"crypto"
+	"encoding"
 	"math/bits"
-
-	"github.com/iotaledger/iota.go/encoding/t5b1"
-	"github.com/iotaledger/iota.go/trinary"
-
-	_ "golang.org/x/crypto/blake2b" // BLAKE2b_512 is the default hashing algorithm
 )
-
-// DefaultHasher is a BLAKE2 based Merkle tree.
-var DefaultHasher = New(crypto.BLAKE2b_512)
 
 // Domain separation prefixes
 const (
@@ -22,45 +15,63 @@ const (
 	NodeHashPrefix = 1
 )
 
-// Hasher implements the RFC6962 tree hashing algorithm.
+// Hasher implements the hashing algorithm described in the IOTA protocol RFC-12.
 type Hasher struct {
-	crypto.Hash
+	hash crypto.Hash
 }
 
-// New creates a new Hashers based on the passed in hash function.
-func New(h crypto.Hash) *Hasher {
-	return &Hasher{Hash: h}
+// NewHasher creates a new Hasher using the provided hash function.
+func NewHasher(h crypto.Hash) *Hasher {
+	return &Hasher{hash: h}
+}
+
+// Size returns the length, in bytes, of a digest resulting from the given hash function.
+func (t *Hasher) Size() int {
+	return t.hash.Size()
 }
 
 // EmptyRoot returns a special case for an empty tree.
+// This is equivalent to Hash(nil).
 func (t *Hasher) EmptyRoot() []byte {
-	return t.New().Sum(nil)
+	return t.hash.New().Sum(nil)
 }
 
-// TreeHash computes the Merkle tree hash of the provided ternary hashes.
-func (t *Hasher) TreeHash(hashes []trinary.Hash) []byte {
-	if len(hashes) == 0 {
-		return t.EmptyRoot()
+// Hash computes the Merkle tree hash of the provided data encodings.
+func (t *Hasher) Hash(data []encoding.BinaryMarshaler) ([]byte, error) {
+	if len(data) == 0 {
+		return t.EmptyRoot(), nil
 	}
-	if len(hashes) == 1 {
-		return t.HashLeaf(hashes[0])
+	if len(data) == 1 {
+		return t.hashLeaf(data[0])
 	}
 
-	k := largestPowerOfTwo(len(hashes))
-	return t.HashNode(t.TreeHash(hashes[:k]), t.TreeHash(hashes[k:]))
+	k := largestPowerOfTwo(len(data))
+	l, err := t.Hash(data[:k])
+	if err != nil {
+		return nil, err
+	}
+	r, err := t.Hash(data[k:])
+	if err != nil {
+		return nil, err
+	}
+	return t.hashNode(l, r), nil
 }
 
-// HashLeaf returns the Merkle tree leaf hash of the provided ternary hash.
-func (t *Hasher) HashLeaf(hash trinary.Hash) []byte {
-	h := t.New()
+// hashLeaf returns the Merkle tree leaf hash of data.
+func (t *Hasher) hashLeaf(data encoding.BinaryMarshaler) ([]byte, error) {
+	b, err := data.MarshalBinary()
+	if err != nil {
+		return nil, err
+	}
+	h := t.hash.New()
 	h.Write([]byte{LeafHashPrefix})
-	h.Write(t5b1.EncodeTrytes(hash))
-	return h.Sum(nil)
+	h.Write(b)
+	return h.Sum(nil), nil
 }
 
-// HashNode returns the inner Merkle tree node hash of the two child nodes l and r.
-func (t *Hasher) HashNode(l, r []byte) []byte {
-	h := t.New()
+// hashNode returns the inner Merkle tree node hash of the two child nodes l and r.
+func (t *Hasher) hashNode(l, r []byte) []byte {
+	h := t.hash.New()
 	h.Write([]byte{NodeHashPrefix})
 	h.Write(l)
 	h.Write(r)
