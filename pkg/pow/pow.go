@@ -22,6 +22,10 @@ const (
 
 // Score returns the PoW score of msg.
 func Score(msg []byte) float64 {
+	if len(msg) < nonceBytes {
+		panic("pow: invalid message length")
+	}
+
 	h := Hash.New()
 	dataLen := len(msg) - nonceBytes
 	// the PoW digest is the hash of msg without the nonce
@@ -51,7 +55,7 @@ func trailingZeros(powDigest []byte, nonce uint64) int {
 	return trinary.TrailingZeros(digest)
 }
 
-// encodeNonce encodes nonce as 64 trits using the b1t8 encoding.
+// encodeNonce encodes nonce as 48 trits using the b1t6 encoding.
 func encodeNonce(dst trinary.Trits, nonce uint64) {
 	var nonceBuf [nonceBytes]byte
 	binary.LittleEndian.PutUint64(nonceBuf[:], nonce)
