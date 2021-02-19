@@ -143,14 +143,16 @@ func sign(signature, privateKey, message []byte) {
 
 	h := sha512.New()
 	h.Write(privateKey[:32])
-	digest1 := h.Sum(nil)
+
+	var digest1, messageDigest, hramDigest [64]byte
+	h.Sum(digest1[:0])
 
 	s := new(edwards25519.Scalar).SetBytesWithClamping(digest1[:32])
 
 	h.Reset()
 	h.Write(digest1[32:])
 	h.Write(message)
-	messageDigest := h.Sum(nil)
+	h.Sum(messageDigest[:0])
 
 	rReduced := new(edwards25519.Scalar).SetUniformBytes(messageDigest[:])
 	R := new(edwards25519.Point).ScalarBaseMult(rReduced)
@@ -161,7 +163,7 @@ func sign(signature, privateKey, message []byte) {
 	h.Write(encodedR[:])
 	h.Write(privateKey[32:])
 	h.Write(message)
-	hramDigest := h.Sum(nil)
+	h.Sum(hramDigest[:0])
 
 	kReduced := new(edwards25519.Scalar).SetUniformBytes(hramDigest[:])
 	S := new(edwards25519.Scalar).MultiplyAdd(kReduced, s, rReduced)
