@@ -8,30 +8,32 @@ import (
 	"os"
 	"strings"
 
+	"github.com/wollac/iota-crypto-demo/internal/rand"
 	"github.com/wollac/iota-crypto-demo/pkg/bech32"
 	"github.com/wollac/iota-crypto-demo/pkg/bech32/address"
+	"github.com/wollac/iota-crypto-demo/pkg/ed25519"
 )
 
 // default values
 var (
-	defPrefix      = address.Mainnet
-	defAddressHash = func() address.Address {
-		addr, _ := address.Ed25519Address([]byte{82, 253, 252, 7, 33, 130, 101, 79, 22, 63, 95, 15, 154, 98, 29, 114, 149, 102, 199, 77, 16, 3, 124, 77, 123, 187, 4, 7, 209, 226, 198, 73})
-		return addr
+	defPrefix    = address.Mainnet
+	defPublicKey = func() ed25519.PublicKey {
+		pub, _, _ := ed25519.GenerateKey(rand.Reader)
+		return pub
 	}()
 	defBech32 = func() string {
-		s, _ := address.Bech32(defPrefix, defAddressHash)
+		s, _ := address.Bech32(defPrefix, address.AddressFromPublicKey(defPublicKey))
 		return s
 	}()
 )
 
 var (
 	encode       = flag.NewFlagSet("encode", flag.ExitOnError)
-	hashString   = encode.String("hash", defAddressHash.String(), "tryte-encoded W-OTS hash or hex-encoded binary hash")
+	keyString    = encode.String("key", hex.EncodeToString(defPublicKey), "hex-encoded Ed25519 public key")
 	prefixString = encode.String("prefix", defPrefix.String(), "network prefix")
 
 	decode        = flag.NewFlagSet("decode", flag.ExitOnError)
-	addressString = decode.String("address", defBech32, "bech32 encoded IOTA address")
+	addressString = decode.String("address", defBech32, "Bech32 encoded IOTA address")
 )
 
 func main() {
@@ -74,32 +76,21 @@ func runEncode(arguments []string) error {
 		return fmt.Errorf("invalid prefix: %w", err)
 	}
 
-	var addr address.Address
-	switch len(*hashString) {
-	case 81:
-		fallthrough
-	case 90:
-		addr, err = address.WOTSAddress(*hashString)
-		if err != nil {
-			return err
-		}
-	default:
-		bytes, err := hex.DecodeString(*hashString)
-		if err != nil {
-			return err
-		}
-		addr, err = address.Ed25519Address(bytes)
-		if err != nil {
-			return err
-		}
+	key, err := hex.DecodeString(*keyString)
+	if err != nil {
+		return fmt.Errorf("invalid key: %w", err)
 	}
-
+	if len(key) != ed25519.PublicKeySize {
+		return fmt.Errorf("invalid pubblic key: length %d", len(key))
+	}
+	addr := address.AddressFromPublicKey(key)
 	s, err := address.Bech32(prefix, addr)
 	if err != nil {
 		return err
 	}
 
 	fmt.Println("==> Bech32 Address Encoder")
+	fmt.Printf("  public key (%d-byte):\t%x\n", len(key), key)
 	fmt.Printf("  hash (%d-char):\t%s\n", len(addr.String()), addr.String())
 	fmt.Printf("  addr bytes (%d-byte):\t%x\n", len(addr.Bytes()), addr.Bytes())
 	fmt.Printf("  network (%d-char):\t%s\n", len(prefix.String()), prefix.String())
