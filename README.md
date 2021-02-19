@@ -4,7 +4,7 @@ This repository contains Go example implementations related to the cryptography 
 ## Packages
 It contains the following general packages:
 - `encoding/b1t6` implements the binary-to-ternary encoding as described in the IOTA protocol [RFC-0015](https://github.com/iotaledger/protocol-rfcs/blob/master/text/0015-binary-to-ternary-encoding/0015-binary-to-ternary-encoding.md).
-- `bech32` implements Bech32 addresses based on the format described in [BIP-0173](https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki). 
+- `bech32` implements Bech32 addresses based on the format described in [RFC-0020 draft](https://github.com/iotaledger/protocol-rfcs/pull/20). 
 - `bip32path` provides utilities for [BIP-0032](https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki) chains.
 - `bip39` implements the [BIP-0039](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) specification and mnemonic [word lists](https://github.com/bitcoin/bips/blob/master/bip-0039/bip-0039-wordlists.md).
 - `ed25519` implements Ed25519 signatures with particular validation rules around edge cases as described in [RFC-0028 draft](https://github.com/iotaledger/protocol-rfcs/pull/28).
