@@ -4,6 +4,7 @@ import (
 	"crypto"
 	"encoding"
 	"encoding/hex"
+	"math"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -58,8 +59,14 @@ func TestHash(t *testing.T) {
 	}
 }
 
-func TestName(t *testing.T) {
-	for i := 2; i <= 16; i++ {
-		t.Logf("%d -> %d\n", i, largestPowerOfTwo(i))
+func TestLargestPowerOfTwo(t *testing.T) {
+	// panics for x < 2
+	assert.Panics(t, func() { largestPowerOfTwo(0) })
+	assert.Panics(t, func() { largestPowerOfTwo(1) })
+
+	// otherwise equals 2^⌊log₂(n-1)⌋
+	for x := 2; x <= 1024; x++ {
+		expected := math.Exp2(math.Floor(math.Log2(float64(x - 1))))
+		assert.EqualValues(t, expected, largestPowerOfTwo(x))
 	}
 }
