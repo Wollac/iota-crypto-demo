@@ -64,7 +64,7 @@ func (t *Hasher) hashLeaf(data encoding.BinaryMarshaler) ([]byte, error) {
 		return nil, err
 	}
 	h := t.hash.New()
-	h.Write([]byte{LeafHashPrefix})
+	h.Write(append([]byte{LeafHashPrefix}, b...))
 	h.Write(b)
 	return h.Sum(nil), nil
 }
@@ -78,10 +78,12 @@ func (t *Hasher) hashNode(l, r []byte) []byte {
 	return h.Sum(nil)
 }
 
-// largestPowerOfTwo returns the largest power of two less than n.
-func largestPowerOfTwo(x int) int {
-	if x < 2 {
+// largestPowerOfTwo returns the largest power of two strictly less than n, i.e. 2^⌊log₂(n-1)⌋ for n > 1.
+func largestPowerOfTwo(n int) uint {
+	if n <= 1 {
 		panic("invalid value")
 	}
-	return 1 << (bits.Len(uint(x-1)) - 1)
+	// bitsLen(n) := ⌊log₂(n) + 1⌋ ⇒ ⌊log₂(n-1)⌋ = bitsLen(n-1) - 1 for n > 1
+	log := bits.Len(uint(n-1)) - 1
+	return 1 << (log & (bits.UintSize - 1)) // hint to the compiler that 0 ≤ log < 2^64
 }

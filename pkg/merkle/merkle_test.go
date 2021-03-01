@@ -57,3 +57,9 @@ func TestHash(t *testing.T) {
 		})
 	}
 }
+
+func TestName(t *testing.T) {
+	for i := 2; i <= 16; i++ {
+		t.Logf("%d -> %d\n", i, largestPowerOfTwo(i))
+	}
+}
