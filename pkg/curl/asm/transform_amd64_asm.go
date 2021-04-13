@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-
 	. "github.com/mmcloughlin/avo/build"
 	. "github.com/mmcloughlin/avo/operand"
 	. "github.com/mmcloughlin/avo/reg"
@@ -55,16 +53,17 @@ func transform() {
 
 func stateLoop(src, dst bctMem) {
 	blockSize := 2 * unroll
+	// the number of unrolled iterations must be even (as sBox swaps high and low)
+	// and the state size must be divisible by the unrolled block
 	if (curl.StateSize-1)%blockSize != 0 {
-		panic(fmt.Sprintf("invalid unroll: %d", unroll))
+		panic("invalid unroll")
 	}
 
 	a := bct{"a", GP64(), GP64()}
 	src.Load(0, a)
 	b := bct{"b", GP64(), GP64()}
 	src.Load(364, b)
-	sBox(&a, b)
-	dst.Store(a, 0)
+	dst.Store(sBox(a, b), 0)
 
 	t := namedRegister{GP64(), "t"}
 	MOVQ(U32(364), t)
@@ -73,16 +72,17 @@ func stateLoop(src, dst bctMem) {
 	MOVQ(U32(1), i)
 
 	Label("StateLoop")
+	offset := 0
 	for u := 0; u < blockSize; u += 2 {
-		src.LoadIdx(t, 364-u/2, a)
-		sBox(&b, a)
-		dst.StoreIdx(b, i, u)
+		offset += 364
+		src.LoadIdx(t, offset, a)
+		dst.StoreIdx(sBox(b, a), i, u)
 
-		src.LoadIdx(t, -1-u/2, b)
-		sBox(&a, b)
-		dst.StoreIdx(a, i, u+1)
+		offset -= 365
+		src.LoadIdx(t, offset, b)
+		dst.StoreIdx(sBox(a, b), i, u+1)
 	}
-	SUBQ(U32(unroll), t)
+	SUBQ(U32(-offset), t)
 
 	// loop through the entire state
 	ADDQ(U32(blockSize), i)
@@ -90,19 +90,22 @@ func stateLoop(src, dst bctMem) {
 	JL(LabelRef("StateLoop"))
 }
 
-// sBox sets a to sBox(a, b).
-func sBox(a *bct, b bct) {
-	Commentf("%s = sBox(%s, %s)", a, a, b)
-	// a.h = (b.l ^ a.h) & a.l
-	XORQ(b.l, a.h)
-	ANDQ(a.l, a.h)
-	// a.l = (b.h ^ a.l) | a.h
-	XORQ(b.h, a.l)
-	ORQ(a.h, a.l)
-	// a.h = ^a.h
-	NOTQ(a.h)
-
-	a.l, a.h = a.h, a.l
+// sBox returns sBox(a, b).
+// The content of a and b is not modified.
+func sBox(a bct, b bct) bct {
+	s := bct{"s", GP64(), GP64()}
+	Commentf("%s = sBox(%s, %s)", s, a, b)
+	// s.l = (b.l ^ a.h) & a.l
+	MOVQ(b.l, s.l)
+	XORQ(a.h, s.l)
+	ANDQ(a.l, s.l)
+	// s.h = (a.l ^ b.h) | s.l
+	MOVQ(a.l, s.h)
+	XORQ(b.h, s.h)
+	ORQ(s.l, s.h)
+	// s.l = ^s.l
+	NOTQ(s.l)
+	return s
 }
 
 type namedRegister struct {

@@ -21,78 +21,83 @@ RoundLoop:
 	MOVQ 2912(DX), R8
 	MOVQ 2912(BX), R9
 
-	// a = sBox(a, b)
-	XORQ R8, DI
-	ANDQ SI, DI
+	// s = sBox(a, b)
+	MOVQ R8, R10
+	XORQ DI, R10
+	ANDQ SI, R10
 	XORQ R9, SI
-	ORQ  DI, SI
-	NOTQ DI
+	ORQ  R10, SI
+	NOTQ R10
 
-	// to[0] = a
-	MOVQ DI, (AX)
+	// to[0] = s
+	MOVQ R10, (AX)
 	MOVQ SI, (CX)
 	MOVQ $0x0000016c, R10
 	MOVQ $0x00000001, R11
 
 StateLoop:
 	// a = from[364+t]
-	MOVQ 2912(DX)(R10*8), DI
-	MOVQ 2912(BX)(R10*8), SI
+	MOVQ 2912(DX)(R10*8), SI
+	MOVQ 2912(BX)(R10*8), DI
 
-	// b = sBox(b, a)
-	XORQ DI, R9
-	ANDQ R8, R9
-	XORQ SI, R8
-	ORQ  R9, R8
-	NOTQ R9
+	// s = sBox(b, a)
+	MOVQ SI, R12
+	XORQ R9, R12
+	ANDQ R8, R12
+	XORQ DI, R8
+	ORQ  R12, R8
+	NOTQ R12
 
-	// to[0+i] = b
-	MOVQ R9, (AX)(R11*8)
+	// to[0+i] = s
+	MOVQ R12, (AX)(R11*8)
 	MOVQ R8, (CX)(R11*8)
 
 	// b = from[-1+t]
-	MOVQ -8(DX)(R10*8), R9
-	MOVQ -8(BX)(R10*8), R8
+	MOVQ -8(DX)(R10*8), R8
+	MOVQ -8(BX)(R10*8), R9
 
-	// a = sBox(a, b)
+	// s = sBox(a, b)
+	MOVQ R8, R12
+	XORQ DI, R12
+	ANDQ SI, R12
 	XORQ R9, SI
-	ANDQ DI, SI
-	XORQ R8, DI
-	ORQ  SI, DI
-	NOTQ SI
+	ORQ  R12, SI
+	NOTQ R12
 
-	// to[1+i] = a
-	MOVQ SI, 8(AX)(R11*8)
-	MOVQ DI, 8(CX)(R11*8)
+	// to[1+i] = s
+	MOVQ R12, 8(AX)(R11*8)
+	MOVQ SI, 8(CX)(R11*8)
 
 	// a = from[363+t]
 	MOVQ 2904(DX)(R10*8), SI
 	MOVQ 2904(BX)(R10*8), DI
 
-	// b = sBox(b, a)
-	XORQ SI, R8
-	ANDQ R9, R8
-	XORQ DI, R9
-	ORQ  R8, R9
-	NOTQ R8
+	// s = sBox(b, a)
+	MOVQ SI, R12
+	XORQ R9, R12
+	ANDQ R8, R12
+	XORQ DI, R8
+	ORQ  R12, R8
+	NOTQ R12
 
-	// to[2+i] = b
-	MOVQ R8, 16(AX)(R11*8)
-	MOVQ R9, 16(CX)(R11*8)
+	// to[2+i] = s
+	MOVQ R12, 16(AX)(R11*8)
+	MOVQ R8, 16(CX)(R11*8)
 
 	// b = from[-2+t]
 	MOVQ -16(DX)(R10*8), R8
 	MOVQ -16(BX)(R10*8), R9
 
-	// a = sBox(a, b)
-	XORQ R8, DI
-	ANDQ SI, DI
+	// s = sBox(a, b)
+	MOVQ R8, R12
+	XORQ DI, R12
+	ANDQ SI, R12
 	XORQ R9, SI
-	ORQ  DI, SI
-	NOTQ DI
+	ORQ  R12, SI
+	NOTQ R12
 
-	// to[3+i] = a
-	MOVQ DI, 24(AX)(R11*8)
+	// to[3+i] = s
+	MOVQ R12, 24(AX)(R11*8)
 	MOVQ SI, 24(CX)(R11*8)
 	SUBQ $0x00000002, R10
 	ADDQ $0x00000004, R11
