@@ -6,7 +6,7 @@ func transformGeneric(lto, hto, lfrom, hfrom *[StateSize]uint) {
 		bL, bH := lfrom[364], hfrom[364]
 		lto[0], hto[0] = sBox(aL, aH, bL, bH)
 
-		t := 364
+		t := 364 // rotation offset
 		for i := 1; i <= StateSize-4; i += 4 {
 			t += 364
 			aL, aH = lfrom[t], hfrom[t]
