@@ -119,12 +119,13 @@ func newKeyFromSeed(privateKey, seed []byte) {
 		panic("ed25519: bad seed length: " + strconv.Itoa(l))
 	}
 
-	digest := sha512.Sum512(seed)
-	s := new(edwards25519.Scalar).SetBytesWithClamping(digest[:32])
-	A := new(edwards25519.Point).ScalarBaseMult(s)
+	h := sha512.Sum512(seed)
+	s := edwards25519.NewScalar().SetBytesWithClamping(h[:32])
+	A := (&edwards25519.Point{}).ScalarBaseMult(s)
+	publicKey := A.Bytes()
 
 	copy(privateKey, seed)
-	copy(privateKey[32:], A.Bytes())
+	copy(privateKey[32:], publicKey)
 }
 
 // Sign signs the message with privateKey and returns a signature. It will
@@ -140,63 +141,59 @@ func sign(signature, privateKey, message []byte) {
 	if l := len(privateKey); l != PrivateKeySize {
 		panic("ed25519: bad private key length: " + strconv.Itoa(l))
 	}
+	seed, publicKey := privateKey[:SeedSize], privateKey[SeedSize:]
 
-	h := sha512.New()
-	h.Write(privateKey[:32])
+	h := sha512.Sum512(seed)
+	s := edwards25519.NewScalar().SetBytesWithClamping(h[:32])
+	prefix := h[32:]
 
-	var digest1, messageDigest, hramDigest [64]byte
-	h.Sum(digest1[:0])
+	mh := sha512.New()
+	mh.Write(prefix)
+	mh.Write(message)
+	messageDigest := make([]byte, 0, sha512.Size)
+	messageDigest = mh.Sum(messageDigest)
+	r := edwards25519.NewScalar().SetUniformBytes(messageDigest)
 
-	s := new(edwards25519.Scalar).SetBytesWithClamping(digest1[:32])
+	R := (&edwards25519.Point{}).ScalarBaseMult(r)
 
-	h.Reset()
-	h.Write(digest1[32:])
-	h.Write(message)
-	h.Sum(messageDigest[:0])
+	kh := sha512.New()
+	kh.Write(R.Bytes())
+	kh.Write(publicKey)
+	kh.Write(message)
+	hramDigest := make([]byte, 0, sha512.Size)
+	hramDigest = kh.Sum(hramDigest)
+	k := edwards25519.NewScalar().SetUniformBytes(hramDigest)
 
-	rReduced := new(edwards25519.Scalar).SetUniformBytes(messageDigest[:])
-	R := new(edwards25519.Point).ScalarBaseMult(rReduced)
+	S := edwards25519.NewScalar().MultiplyAdd(k, s, r)
 
-	encodedR := R.Bytes()
-
-	h.Reset()
-	h.Write(encodedR[:])
-	h.Write(privateKey[32:])
-	h.Write(message)
-	h.Sum(hramDigest[:0])
-
-	kReduced := new(edwards25519.Scalar).SetUniformBytes(hramDigest[:])
-	S := new(edwards25519.Scalar).MultiplyAdd(kReduced, s, rReduced)
-
-	copy(signature[:], encodedR[:])
+	copy(signature[:32], R.Bytes())
 	copy(signature[32:], S.Bytes())
 }
 
 // Verify reports whether sig is a valid signature of message by publicKey.
 // It uses precisely-specified validation criteria (ZIP 215) suitable for use in consensus-critical contexts.
 func Verify(publicKey PublicKey, message, sig []byte) bool {
-	if len(publicKey) != PublicKeySize {
-		return false
+	if l := len(publicKey); l != PublicKeySize {
+		panic("ed25519: bad public key length: " + strconv.Itoa(l))
 	}
 	if len(sig) != SignatureSize || sig[63]&224 != 0 {
 		return false
 	}
 
 	// ZIP215: this works because SetBytes does not check that encodings are canonical
-	A, err := new(edwards25519.Point).SetBytes(publicKey)
+	A, err := (&edwards25519.Point{}).SetBytes(publicKey)
 	if err != nil {
 		return false
 	}
 	A.Negate(A)
 
-	h := sha512.New()
-	h.Write(sig[:32])
-	h.Write(publicKey[:])
-	h.Write(message)
-	var digest [64]byte
-	h.Sum(digest[:0])
-
-	hReduced := new(edwards25519.Scalar).SetUniformBytes(digest[:])
+	kh := sha512.New()
+	kh.Write(sig[:32])
+	kh.Write(publicKey)
+	kh.Write(message)
+	hramDigest := make([]byte, 0, sha512.Size)
+	hramDigest = kh.Sum(hramDigest)
+	k := edwards25519.NewScalar().SetUniformBytes(hramDigest)
 
 	// ZIP215: this works because SetBytes does not check that encodings are canonical
 	checkR, err := new(edwards25519.Point).SetBytes(sig[:32])
@@ -206,17 +203,15 @@ func Verify(publicKey PublicKey, message, sig []byte) bool {
 
 	// https://tools.ietf.org/html/rfc8032#section-5.1.7 requires that s be in
 	// the range [0, order) in order to prevent signature malleability
-	s, err := new(edwards25519.Scalar).SetCanonicalBytes(sig[32:])
+	S, err := edwards25519.NewScalar().SetCanonicalBytes(sig[32:])
 	if err != nil {
 		return false
 	}
 
-	R := new(edwards25519.Point).VarTimeDoubleScalarBaseMult(hReduced, A, s)
+	R := (&edwards25519.Point{}).VarTimeDoubleScalarBaseMult(k, A, S)
 
 	// ZIP215: We want to check [8](R - checkR) == 0
-	p := new(edwards25519.Point).Subtract(R, checkR)     // p = R - checkR
-	p.Add(p, p)                                          // p = [2]p
-	p.Add(p, p)                                          // p = [4]p
-	p.Add(p, p)                                          // p = [8]p
+	p := new(edwards25519.Point).Subtract(R, checkR) // p = R - checkR
+	p.MultByCofactor(p)
 	return p.Equal(edwards25519.NewIdentityPoint()) == 1 // p == 0
 }
