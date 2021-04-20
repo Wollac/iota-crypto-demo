@@ -10,6 +10,7 @@ import (
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/kerl"
 	"github.com/iotaledger/iota.go/trinary"
+	"github.com/wollac/iota-crypto-demo/pkg/bech32/address"
 	"github.com/wollac/iota-crypto-demo/pkg/bip32path"
 	"github.com/wollac/iota-crypto-demo/pkg/bip39"
 	"github.com/wollac/iota-crypto-demo/pkg/slip10"
@@ -35,6 +36,11 @@ var (
 		"path",
 		"44'/4218'/0'/0'",
 		"string form of the BIP-32 address path to derive the extended private key",
+	)
+	prefixString = flag.String(
+		"prefix",
+		address.Mainnet.String(),
+		"network prefix used for the Ed25519 address",
 	)
 )
 
@@ -107,13 +113,22 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("failed deriving %s key: %w", curve.Name(), err)
 	}
+	hrp, err := address.ParsePrefix(*prefixString)
+	if err != nil {
+		return fmt.Errorf("invalid network prefix: %w", err)
+	}
+	public, _ := slip10.Ed25519Key(key)
+	addr, err := address.Bech32(hrp, address.AddressFromPublicKey(public))
+	if err != nil {
+		return fmt.Errorf("failed to encode address with %s prefix: %w", hrp, err)
+	}
 
 	fmt.Printf(" SLIP-10 curve seed:\t%s\n", curve.SeedKey())
 	fmt.Printf(" SLIP-10 address path:\t%s\n", path)
 
 	fmt.Printf(" private key (%d-byte):\t%x\n", slip10.PrivateKeySize, key.Key)
 	fmt.Printf(" chain code (%d-byte):\t%x\n", slip10.ChainCodeSize, key.ChainCode)
-	fmt.Printf(" public key (%d-byte):\t%x\n", slip10.PublicKeySize, curve.PublicKey(key))
+	fmt.Printf(" address (%d-char):\t%s\n", len(addr), addr)
 
 	return nil
 }
