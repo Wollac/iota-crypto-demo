@@ -1,7 +1,7 @@
 package wordlists
 
 import (
-	"io/ioutil"
+	"io"
 	"net/http"
 	"testing"
 
@@ -16,7 +16,7 @@ func testWordListHash(t *testing.T, list string, name string) {
 	require.NoError(t, err)
 	defer func() { assert.NoError(t, resp.Body.Close()) }()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
 
 	referenceList := string(body)

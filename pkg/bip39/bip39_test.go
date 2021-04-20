@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -120,7 +120,7 @@ func TestMnemonicToSeed(t *testing.T) {
 }
 
 func readJSONTests(t *testing.T) []TestVector {
-	b, err := ioutil.ReadFile(filepath.Join("testdata", t.Name()+".json"))
+	b, err := os.ReadFile(filepath.Join("testdata", t.Name()+".json"))
 	require.NoError(t, err)
 
 	var tvs []TestVector

@@ -2,8 +2,8 @@ package slip10
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"math/rand"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -42,7 +42,7 @@ func TestEd25519(t *testing.T) {
 }
 
 func readJSONTests(t *testing.T) []TestVector {
-	b, err := ioutil.ReadFile(filepath.Join("testdata", t.Name()+".json"))
+	b, err := os.ReadFile(filepath.Join("testdata", t.Name()+".json"))
 	require.NoError(t, err)
 
 	var tvs []TestVector
