@@ -9,6 +9,7 @@ import (
 
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/kerl"
+	"github.com/iotaledger/iota.go/kerl/sha3"
 	"github.com/iotaledger/iota.go/trinary"
 	"github.com/wollac/iota-crypto-demo/pkg/bech32/address"
 	"github.com/wollac/iota-crypto-demo/pkg/bip32path"
@@ -144,23 +145,20 @@ func generateEntropy(size int) ([]byte, error) {
 // Legacy IOTA seed derivation as implemented in the blue-app-iota:
 // https://github.com/IOTA-Ledger/blue-app-iota/blob/master/docs/specification.md#iota-seed
 func iotaSeedFromKey(key *slip10.Key) trinary.Hash {
-	// the 512 bits extended private key (k, c) of the provided address path is then hashed using Kerl.
-	hash := kerl.NewKerl()
+	// the 512 bits extended private key (k, c) of the provided address path is then hashed using Keccak-384.
+	hash := sha3.NewLegacyKeccak384()
 
-	// as Kerl expects multiples of 48 bytes as input, the following 98 bytes are absorbed:
+	// as Kerl usually expects multiples of 48 bytes as input, the following 98 bytes are absorbed:
 	// k[0:32] + c[0:16] + k[16:32] + c[0:32]
-	var entropy []byte
-	entropy = append(entropy, key.Key[0:32]...)
-	entropy = append(entropy, key.ChainCode[0:16]...)
-	entropy = append(entropy, key.Key[16:32]...)
-	entropy = append(entropy, key.ChainCode[0:32]...)
+	hash.Write(key.Key[0:32])
+	hash.Write(key.ChainCode[0:16])
+	hash.Write(key.Key[16:32])
+	hash.Write(key.ChainCode[0:32])
 
-	// absorb two chunks of 48 bytes
-	in, _ := kerl.KerlBytesToTrytes(entropy[:consts.HashBytesSize])
-	hash.MustAbsorbTrytes(in)
-	in, _ = kerl.KerlBytesToTrytes(entropy[consts.HashBytesSize:])
-	hash.MustAbsorbTrytes(in)
-
-	// derive the the final 243 trit IOTA seed
-	return hash.MustSqueezeTrytes(consts.HashTrinarySize)
+	// derive the the final 243 trit IOTA seed from the resulting hash
+	seed, err := kerl.KerlBytesToTrytes(hash.Sum(nil))
+	if err != nil {
+		panic(err)
+	}
+	return seed
 }
