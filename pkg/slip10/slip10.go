@@ -62,7 +62,7 @@ func DeriveKeyFromPath(seed []byte, curve Curve, path []uint32) (*Key, error) {
 // NewMasterKey creates a new master private extended key for the curve from a seed.
 func NewMasterKey(seed []byte, curve Curve) (*Key, error) {
 	// Calculate I = HMAC-SHA512(Key = Curve, Data = seed)
-	inter, err := hmacSHA256(curve.SeedKey(), seed)
+	inter, err := hmacSHA512(curve.SeedKey(), seed)
 	if err != nil {
 		return nil, err
 	}
@@ -121,10 +121,10 @@ func (key *Key) getIntermediary(childIndex uint32) ([]byte, error) {
 	}
 	data = append(data, uint32Bytes(childIndex)...)
 
-	return hmacSHA256(key.ChainCode, data)
+	return hmacSHA512(key.ChainCode, data)
 }
 
-func hmacSHA256(key []byte, data []byte) ([]byte, error) {
+func hmacSHA512(key []byte, data []byte) ([]byte, error) {
 	hash := hmac.New(sha512.New, key)
 	_, err := hash.Write(data)
 	if err != nil {
