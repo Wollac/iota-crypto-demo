@@ -80,5 +80,45 @@
         "public":"024d902e1a2fc7a8755ab5b694c575fce742c48d9ff192e63df5193e4c7afe1f9c"
       }
     ]
+  },
+  {
+    "seed":"4b381541583be4423346c643850da4b320e46a87ae3d2a4e6da11eba819cd4acba45d239319ac14f863b8d5ab5a0d0c64d2e8a1e7d1457df2e5a3c51c73235be",
+    "tests":[
+      {
+        "chain":"m",
+        "chainCode":"01d28a3e53cffa419ec122c968b3259e16b65076495494d97cae10bbfec3c36f",
+        "private":"00ddb80b067e0d4993197fe10f2657a844a384589847602d56f0c629c81aae32",
+        "public":"03683af1ba5743bdfc798cf814efeeab2735ec52d95eced528e692b8e34c4e5669"
+      },
+      {
+        "chain":"m/0H",
+        "chainCode":"e5fea12a97b927fc9dc3d2cb0d1ea1cf50aa5a1fdc1f933e8906bb38df3377bd",
+        "private":"491f7a2eebc7b57028e0d3faa0acda02e75c33b03c48fb288c41e2ea44e1daef",
+        "public":"026557fdda1d5d43d79611f784780471f086d58e8126b8c40acb82272a7712e7f2"
+      }
+    ]
+  },
+  {
+    "seed":"3ddd5602285899a946114506157c7997e5444528f3003f6134712147db19b678",
+    "tests":[
+      {
+        "chain":"m",
+        "chainCode":"d0c8a1f6edf2500798c3e0b54f1b56e45f6d03e6076abd36e5e2f54101e44ce6",
+        "private":"12c0d59c7aa3a10973dbd3f478b65f2516627e3fe61e00c345be9a477ad2e215",
+        "public":"026f6fedc9240f61daa9c7144b682a430a3a1366576f840bf2d070101fcbc9a02d"
+      },
+      {
+        "chain":"m/0H",
+        "chainCode":"cdc0f06456a14876c898790e0b3b1a41c531170aec69da44ff7b7265bfe7743b",
+        "private":"00d948e9261e41362a688b916f297121ba6bfb2274a3575ac0e456551dfd7f7e",
+        "public":"039382d2b6003446792d2917f7ac4b3edf079a1a94dd4eb010dc25109dda680a9d"
+      },
+      {
+        "chain":"m/0H/1H",
+        "chainCode":"a48ee6674c5264a237703fd383bccd9fad4d9378ac98ab05e6e7029b06360c0d",
+        "private":"3a2086edd7d9df86c3487a5905a1712a9aa664bce8cc268141e07549eaa8661d",
+        "public":"032edaf9e591ee27f3c69c36221e3c54c38088ef34e93fbb9bb2d4d9b92364cbbd"
+      }
+    ]
   }
 ]
