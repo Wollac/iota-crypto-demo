@@ -205,7 +205,7 @@ func Verify(publicKey PublicKey, message, sig []byte) bool {
 	kh.Write(message)
 	hramDigest := make([]byte, 0, sha512.Size)
 	hramDigest = kh.Sum(hramDigest)
-	k, _ := edwards25519.NewScalar().SetUniformBytes(hramDigest)
+	k, err := edwards25519.NewScalar().SetUniformBytes(hramDigest)
 	if err != nil {
 		panic(err)
 	}
