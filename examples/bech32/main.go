@@ -16,7 +16,8 @@ import (
 
 // default values
 var (
-	defPrefix    = address.Mainnet
+	defPrefix    = address.IOTAMainnet
+	defVersion   = address.Ed25519
 	defPublicKey = func() ed25519.PublicKey {
 		pub, _, _ := ed25519.GenerateKey(rand.Reader)
 		return pub
@@ -28,9 +29,10 @@ var (
 )
 
 var (
-	encode       = flag.NewFlagSet("encode", flag.ExitOnError)
-	keyString    = encode.String("key", hex.EncodeToString(defPublicKey), "hex-encoded Ed25519 public key")
-	prefixString = encode.String("prefix", defPrefix.String(), "network prefix")
+	encode        = flag.NewFlagSet("encode", flag.ExitOnError)
+	prefixString  = encode.String("prefix", defPrefix.String(), "network prefix")
+	versionString = encode.String("version", defVersion.String(), "address version")
+	keyString     = encode.String("key", hex.EncodeToString(defPublicKey), "hex-encoded public key / output ID")
 
 	decode        = flag.NewFlagSet("decode", flag.ExitOnError)
 	addressString = decode.String("address", defBech32, "Bech32 encoded IOTA address")
@@ -76,14 +78,41 @@ func runEncode(arguments []string) error {
 		return fmt.Errorf("invalid prefix: %w", err)
 	}
 
+	version, err := address.ParseVersion(*versionString)
+	if err != nil {
+		return fmt.Errorf("invalid address version: %w", err)
+	}
+
 	key, err := hex.DecodeString(*keyString)
 	if err != nil {
 		return fmt.Errorf("invalid key: %w", err)
 	}
-	if len(key) != ed25519.PublicKeySize {
-		return fmt.Errorf("invalid pubblic key: length %d", len(key))
+
+	var addr address.Address
+	switch version {
+	case address.Ed25519:
+		if len(key) != ed25519.PublicKeySize {
+			return fmt.Errorf("invalid pubblic key: length %d", len(key))
+		}
+		addr = address.AddressFromPublicKey(key)
+	case address.Alias:
+		if len(key) != address.OutputIDLength {
+			return fmt.Errorf("invalid output ID: length %d", len(key))
+		}
+		var outputID [address.OutputIDLength]byte
+		copy(outputID[:], key)
+		addr = address.AliasAddressFromOutputID(outputID)
+	case address.NFT:
+		if len(key) != address.OutputIDLength {
+			return fmt.Errorf("invalid output ID: length %d", len(key))
+		}
+		var outputID [address.OutputIDLength]byte
+		copy(outputID[:], key)
+		addr = address.NFTAddressFromOutputID(outputID)
+	default:
+		panic("invalid address version")
 	}
-	addr := address.AddressFromPublicKey(key)
+
 	s, err := address.Bech32(prefix, addr)
 	if err != nil {
 		return err
@@ -94,7 +123,7 @@ func runEncode(arguments []string) error {
 	fmt.Printf("  hash (%d-char):\t%s\n", len(addr.String()), addr.String())
 	fmt.Printf("  addr bytes (%d-byte):\t%x\n", len(addr.Bytes()), addr.Bytes())
 	fmt.Printf("  network (%d-char):\t%s\n", len(prefix.String()), prefix.String())
-	fmt.Printf("  version (1-byte):\t%b (%s)\n", addr.Version(), addr.Version().String())
+	fmt.Printf("  version (1-byte):\t0x%02x (%s)\n", uint(addr.Version()), addr.Version().String())
 	fmt.Printf("  bech32 (%d-char):\t%s\n", len(s), s)
 	fmt.Printf("    checksum\t\t%s\n", strings.Repeat(" ", len(s)-6)+strings.Repeat("^", 6))
 	return nil
@@ -117,7 +146,7 @@ func runDecode(arguments []string) error {
 	}
 
 	fmt.Printf("  network (%d-char):\t%s\n", len(prefix.String()), prefix.String())
-	fmt.Printf("  version (1-byte):\t%b (%s)\n", addr.Version(), addr.Version().String())
+	fmt.Printf("  version (1-byte):\t0x%02x (%s)\n", uint(addr.Version()), addr.Version().String())
 	fmt.Printf("  hash (%d-char):\t%s\n", len(addr.String()), addr.String())
 	fmt.Printf("  addr bytes (%d-byte):\t%x\n", len(addr.Bytes()), addr.Bytes())
 	return nil

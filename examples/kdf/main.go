@@ -40,7 +40,7 @@ var (
 	)
 	prefixString = flag.String(
 		"prefix",
-		address.Mainnet.String(),
+		address.IOTAMainnet.String(),
 		"network prefix used for the Ed25519 address",
 	)
 )
