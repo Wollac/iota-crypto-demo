@@ -15,6 +15,8 @@ import (
 	"github.com/wollac/iota-crypto-demo/pkg/bip32path"
 	"github.com/wollac/iota-crypto-demo/pkg/bip39"
 	"github.com/wollac/iota-crypto-demo/pkg/slip10"
+	"github.com/wollac/iota-crypto-demo/pkg/slip10/eddsa"
+	"github.com/wollac/iota-crypto-demo/pkg/slip10/elliptic"
 )
 
 var (
@@ -94,13 +96,13 @@ func run() error {
 
 	fmt.Println("\n==> Legacy IOTA Seed Derivation (Ledger App)")
 
-	curve := slip10.Secp256k1()
+	curve := elliptic.Secp256k1()
 	key, err := slip10.DeriveKeyFromPath(seed, curve, path)
 	if err != nil {
 		return fmt.Errorf("failed deriving %s key: %w", curve.Name(), err)
 	}
 
-	fmt.Printf(" SLIP-10 curve seed:\t%s\n", curve.SeedKey())
+	fmt.Printf(" SLIP-10 curve seed:\t%s\n", curve.HmacKey())
 	fmt.Printf(" SLIP-10 address path:\t%s\n", path)
 
 	fmt.Printf(" private key (%d-byte):\t%x\n", slip10.PrivateKeySize, key.Key)
@@ -109,7 +111,7 @@ func run() error {
 
 	fmt.Println("\n==> Ed25519 Private Key Derivation")
 
-	curve = slip10.Ed25519()
+	curve = eddsa.Ed25519()
 	key, err = slip10.DeriveKeyFromPath(seed, curve, path)
 	if err != nil {
 		return fmt.Errorf("failed deriving %s key: %w", curve.Name(), err)
@@ -118,13 +120,13 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("invalid network prefix: %w", err)
 	}
-	public, _ := slip10.Ed25519Key(key)
+	public, _ := key.Key.(eddsa.Seed).Ed25519Key()
 	addr, err := address.Bech32(hrp, address.AddressFromPublicKey(public))
 	if err != nil {
 		return fmt.Errorf("failed to encode address with %s prefix: %w", hrp, err)
 	}
 
-	fmt.Printf(" SLIP-10 curve seed:\t%s\n", curve.SeedKey())
+	fmt.Printf(" SLIP-10 curve seed:\t%s\n", curve.HmacKey())
 	fmt.Printf(" SLIP-10 address path:\t%s\n", path)
 
 	fmt.Printf(" private key (%d-byte):\t%x\n", slip10.PrivateKeySize, key.Key)
@@ -144,18 +146,21 @@ func generateEntropy(size int) ([]byte, error) {
 
 // Legacy IOTA seed derivation as implemented in the blue-app-iota:
 // https://github.com/IOTA-Ledger/blue-app-iota/blob/master/docs/specification.md#iota-seed
-func iotaSeedFromKey(key *slip10.Key) trinary.Hash {
+func iotaSeedFromKey(key *slip10.ExtendedKey) trinary.Hash {
 	// the 512 bits extended private key (k, c) of the provided address path is then hashed using Keccak-384.
 	hash := sha3.NewLegacyKeccak384()
 
+	k := key.Key.Bytes()
+	c := key.ChainCode
+
 	// as Kerl usually expects multiples of 48 bytes as input, the following 98 bytes are absorbed:
 	// k[0:32] + c[0:16] + k[16:32] + c[0:32]
-	hash.Write(key.Key[0:32])
-	hash.Write(key.ChainCode[0:16])
-	hash.Write(key.Key[16:32])
-	hash.Write(key.ChainCode[0:32])
+	hash.Write(k[0:32])
+	hash.Write(c[0:16])
+	hash.Write(k[16:32])
+	hash.Write(c[0:32])
 
-	// derive the the final 243 trit IOTA seed from the resulting hash
+	// derive the  final 243 trit IOTA seed from the resulting hash
 	seed, err := kerl.KerlBytesToTrytes(hash.Sum(nil))
 	if err != nil {
 		panic(err)

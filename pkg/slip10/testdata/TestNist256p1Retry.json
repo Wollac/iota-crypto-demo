@@ -1,0 +1,40 @@
+[
+  {
+    "seed": "000102030405060708090a0b0c0d0e0f",
+    "tests": [
+      {
+        "chain": "m",
+        "fingerprint": "00000000",
+        "chainCode": "beeb672fe4621673f722f38529c07392fecaa61015c80c34f29ce8b41b3cb6ea",
+        "private": "612091aaa12e22dd2abef664f8a01a82cae99ad7441b7ef8110424915c268bc2",
+        "public": "0266874dc6ade47b3ecd096745ca09bcd29638dd52c2c12117b11ed3e458cfa9e8"
+      },
+      {
+        "chain": "m/28578H",
+        "fingerprint": "be6105b5",
+        "chainCode": "e94c8ebe30c2250a14713212f6449b20f3329105ea15b652ca5bdfc68f6c65c2",
+        "private": "06f0db126f023755d0b8d86d4591718a5210dd8d024e3e14b6159d63f53aa669",
+        "public": "02519b5554a4872e8c9c1c847115363051ec43e93400e030ba3c36b52a3e70a5b7"
+      },
+      {
+        "chain": "m/28578H/33941",
+        "fingerprint": "3e2b7bc6",
+        "chainCode": "9e87fe95031f14736774cd82f25fd885065cb7c358c1edf813c72af535e83071",
+        "private": "092154eed4af83e078ff9b84322015aefe5769e31270f62c3f66c33888335f3a",
+        "public": "0235bfee614c0d5b2cae260000bb1d0d84b270099ad790022c1ae0b2e782efe120"
+      }
+    ]
+  },
+  {
+    "seed": "a7305bc8df8d0951f0cb224c0e95d7707cbdf2c6ce7e8d481fec69c7ff5e9446",
+    "tests": [
+      {
+        "chain": "m",
+        "fingerprint": "00000000",
+        "chainCode": "7762f9729fed06121fd13f326884c82f59aa95c57ac492ce8c9654e60efd130c",
+        "private": "3b8c18469a4634517d6d0b65448f8e6c62091b45540a1743c5846be55d47d88f",
+        "public": "0383619fadcde31063d8c5cb00dbfe1713f3e6fa169d8541a798752a1c1ca0cb20"
+      }
+    ]
+  }
+]
