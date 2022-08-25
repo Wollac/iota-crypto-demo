@@ -1,6 +1,6 @@
 module github.com/wollac/iota-crypto-demo/pkg/curl/asm
 
-go 1.16
+go 1.17
 
 require (
 	github.com/mmcloughlin/avo v0.4.0
