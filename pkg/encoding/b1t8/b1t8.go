@@ -1,4 +1,4 @@
-// Package b1t8 implements the b1t8 encoding encoding as specified by IOTA Protocol RFC-0015.
+// Package b1t8 implements the b1t8 encoding which uses 8 trits to encode each byte.
 package b1t8
 
 import (

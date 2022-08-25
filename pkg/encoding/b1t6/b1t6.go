@@ -1,5 +1,5 @@
-// Package b1t6 implements the b1t6 encoding encoding which uses a group of 6 trits to encode each byte.
-// See the IOTA protocol RFC-0015 for details.
+// Package b1t6 implements the b1t6 encoding which uses a group of 6 trits to encode each byte.
+// See the IOTA protocol TIP-5 https://iotaledger.github.io/tips/tips/TIP-0005/tip-0005.html for details.
 package b1t6
 
 import (

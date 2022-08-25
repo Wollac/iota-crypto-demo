@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"errors"
+	"math/rand"
 	"strings"
 	"testing"
 
@@ -127,4 +128,42 @@ func mustDecodeHex(s string) []byte {
 		panic(err)
 	}
 	return dst
+}
+
+var (
+	benchBytesLen = 1000
+	benchTritsLen = b1t6.EncodedLen(benchBytesLen)
+)
+
+func BenchmarkEncode(b *testing.B) {
+	data := make([][]byte, b.N)
+	for i := range data {
+		data[i] = randomBytes(benchBytesLen)
+	}
+	b.ResetTimer()
+
+	dst := make(trinary.Trits, benchTritsLen)
+	for i := range data {
+		_ = b1t6.Encode(dst, data[i])
+	}
+}
+
+func BenchmarkDecode(b *testing.B) {
+	data := make([]trinary.Trits, b.N)
+	for i := range data {
+		data[i] = make(trinary.Trits, benchTritsLen)
+		b1t6.Encode(data[i], randomBytes(benchBytesLen))
+	}
+	b.ResetTimer()
+
+	dst := make([]byte, benchBytesLen)
+	for i := range data {
+		_, _ = b1t6.Decode(dst, data[i])
+	}
+}
+
+func randomBytes(n int) []byte {
+	result := make([]byte, n)
+	rand.Read(result)
+	return result
 }
