@@ -149,7 +149,7 @@ func sign(signature, privateKey, message []byte) {
 	h := sha512.Sum512(seed)
 	s, err := edwards25519.NewScalar().SetBytesWithClamping(h[:32])
 	if err != nil {
-		panic(err)
+		panic("ed25519: internal error: setting scalar failed")
 	}
 	prefix := h[32:]
 
@@ -160,7 +160,7 @@ func sign(signature, privateKey, message []byte) {
 	messageDigest = mh.Sum(messageDigest)
 	r, err := edwards25519.NewScalar().SetUniformBytes(messageDigest)
 	if err != nil {
-		panic(err)
+		panic("ed25519: internal error: setting scalar failed")
 	}
 
 	R := (&edwards25519.Point{}).ScalarBaseMult(r)
@@ -173,7 +173,7 @@ func sign(signature, privateKey, message []byte) {
 	hramDigest = kh.Sum(hramDigest)
 	k, err := edwards25519.NewScalar().SetUniformBytes(hramDigest)
 	if err != nil {
-		panic(err)
+		panic("ed25519: internal error: setting scalar failed")
 	}
 
 	S := edwards25519.NewScalar().MultiplyAdd(k, s, r)
@@ -207,7 +207,7 @@ func Verify(publicKey PublicKey, message, sig []byte) bool {
 	hramDigest = kh.Sum(hramDigest)
 	k, err := edwards25519.NewScalar().SetUniformBytes(hramDigest)
 	if err != nil {
-		panic(err)
+		panic("ed25519: internal error: setting scalar failed")
 	}
 
 	// ZIP215: this works because SetBytes does not check that encodings are canonical
