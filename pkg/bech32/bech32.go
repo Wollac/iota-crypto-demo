@@ -17,7 +17,7 @@ const (
 
 var charset = newEncoding("qpzry9x8gf2tvdw0s3jn54khce6mua7l")
 
-// Encode encodes the String string and the src data as a Bech32 string.
+// Encode encodes the hrp string and the src data as a Bech32 string.
 // It returns an error when the input is invalid.
 func Encode(hrp string, src []byte) (string, error) {
 	dataLen := base32.EncodedLen(len(src))

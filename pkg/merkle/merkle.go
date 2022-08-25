@@ -1,5 +1,5 @@
 /*
-Package merkle implements the Merkle tree hash computation of a list of bundle hashes.
+Package merkle implements the Merkle tree hash computation.
 */
 package merkle
 
