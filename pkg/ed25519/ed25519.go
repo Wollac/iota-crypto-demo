@@ -182,6 +182,9 @@ func sign(signature, privateKey, message []byte) {
 	copy(signature[32:], S.Bytes())
 }
 
+// identity is the point at infinity.
+var identity = edwards25519.NewIdentityPoint()
+
 // Verify reports whether sig is a valid signature of message by publicKey.
 // It uses precisely-specified validation criteria (ZIP 215) suitable for use in consensus-critical contexts.
 func Verify(publicKey PublicKey, message, sig []byte) bool {
@@ -228,5 +231,5 @@ func Verify(publicKey PublicKey, message, sig []byte) bool {
 	// ZIP215: We want to check [8](R - checkR) == 0
 	p := new(edwards25519.Point).Subtract(R, checkR) // p = R - checkR
 	p.MultByCofactor(p)
-	return p.Equal(edwards25519.NewIdentityPoint()) == 1 // p == 0
+	return p.Equal(identity) == 1 // p == 0
 }
