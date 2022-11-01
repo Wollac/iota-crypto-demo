@@ -142,16 +142,18 @@ func BenchmarkVerify(b *testing.B) {
 	publicKey, privateKey, _ := ed25519.GenerateKey(nil)
 	data := make([]struct {
 		message []byte
-		sig     []byte
+		sig     [ed25519.SignatureSize]byte
 	}, b.N)
 	for i := range data {
 		data[i].message = make([]byte, 64)
 		rand.Read(data[i].message)
-		data[i].sig = ed25519.Sign(privateKey, data[i].message)
+		copy(data[i].sig[:], ed25519.Sign(privateKey, data[i].message))
 	}
 
 	b.ResetTimer()
 	for i := range data {
-		_ = ed25519.Verify(publicKey, data[i].message, data[i].sig)
+		if !ed25519.Verify(publicKey, data[i].message, data[i].sig[:]) {
+			b.Fail()
+		}
 	}
 }
