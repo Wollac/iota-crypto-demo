@@ -1,3 +1,4 @@
+// Package ec implements the ECVRF-EDWARDS25519-SHA512-TAI VRF according to draft-irtf-cfrg-vrf-15.
 package ec
 
 import (
@@ -27,10 +28,16 @@ type (
 	PrivateKey = ed25519.PrivateKey
 )
 
+// GenerateKey generates a public/private key pair using entropy from rand.
+// If rand is nil, crypto/rand.Reader will be used.
 func GenerateKey(rand io.Reader) (PublicKey, PrivateKey, error) {
 	return ed25519.GenerateKey(rand)
 }
 
+// NewKeyFromSeed calculates a private key from a seed. It will panic if
+// len(seed) is not SeedSize. This function is provided for interoperability
+// with RFC 8032. RFC 8032's private keys correspond to seeds in this
+// package.
 func NewKeyFromSeed(seed []byte) ed25519.PrivateKey {
 	return ed25519.NewKeyFromSeed(seed)
 }
@@ -56,12 +63,15 @@ var (
 	proofToHashDomainSeparatorBack  = []byte{0x00}
 )
 
+// Proof represents a VRF proof.
 type Proof struct {
 	gamma *edwards25519.Point
 	c     *edwards25519.Scalar
 	s     *edwards25519.Scalar
 }
 
+// Hash returns the VRF hash output corresponding to p.
+// Hash should be run only on p that is known to have been produced by Prove, or from within Verify.
 func (p *Proof) Hash() []byte {
 	gamma := new(edwards25519.Point).MultByCofactor(p.gamma)
 
@@ -76,6 +86,7 @@ func (p *Proof) Hash() []byte {
 	return betaString
 }
 
+// Bytes returns the canonical 80-byte encoding of p.
 func (p *Proof) Bytes() []byte {
 	piString := make([]byte, ProofSize)
 	copy(piString[:ptLen], p.gamma.Bytes())
@@ -85,8 +96,10 @@ func (p *Proof) Bytes() []byte {
 	return piString
 }
 
-func (p *Proof) SetBytes(data []byte) (*Proof, error) {
-	if err := p.UnmarshalBinary(data); err != nil {
+// SetBytes sets p = x, where x is an 80-byte encoding of p.
+// If x does not represent a valid proof, SetBytes returns nil and an error.
+func (p *Proof) SetBytes(x []byte) (*Proof, error) {
+	if err := p.UnmarshalBinary(x); err != nil {
 		return nil, err
 	}
 
@@ -123,7 +136,8 @@ func (p *Proof) UnmarshalBinary(data []byte) error {
 	return nil
 }
 
-func Prove(privateKey PrivateKey, alphaString []byte) *Proof {
+// Prove computes the VRF proof for the input alpha.
+func Prove(privateKey PrivateKey, alpha []byte) *Proof {
 	if l := len(privateKey); l != PrivateKeySize {
 		panic("ecvrf: bad private key length: " + strconv.Itoa(l))
 	}
@@ -141,7 +155,7 @@ func Prove(privateKey PrivateKey, alphaString []byte) *Proof {
 	}
 
 	// H = ECVRF_encode_to_curve(encode_to_curve_salt, alpha_string)
-	H := encodeToCurveTryAndIncrement(publicKey, alphaString)
+	H := encodeToCurveTryAndIncrement(publicKey, alpha)
 
 	// Gamma = x*H
 	Gamma := new(edwards25519.Point).ScalarMult(x, H)
@@ -165,6 +179,8 @@ func Prove(privateKey PrivateKey, alphaString []byte) *Proof {
 	return &Proof{Gamma, c, s}
 }
 
+// ProofToHash computes the VRF hash output corresponding to a VRF proof.
+// ProofToHash should be run only on piString that is known to have been produced by Prove, or from within Verify.
 func ProofToHash(piString []byte) ([]byte, error) {
 	pi, err := new(Proof).SetBytes(piString)
 	if err != nil {
@@ -174,7 +190,9 @@ func ProofToHash(piString []byte) ([]byte, error) {
 	return pi.Hash(), nil
 }
 
-func Verify(publicKey PublicKey, alphaString []byte, piString []byte) (bool, []byte) {
+// Verify reports whether piString is a valid proof of alpha by publicKey.
+// If the proof is valid, Verify also returns the VRF hash output.
+func Verify(publicKey PublicKey, alpha []byte, piString []byte) (bool, []byte) {
 	if l := len(publicKey); l != PublicKeySize {
 		panic("ecvrf: bad public key length: " + strconv.Itoa(l))
 	}
@@ -189,7 +207,7 @@ func Verify(publicKey PublicKey, alphaString []byte, piString []byte) (bool, []b
 	}
 
 	// H = ECVRF_encode_to_curve(encode_to_curve_salt, alpha_string)
-	H := encodeToCurveTryAndIncrement(publicKey, alphaString)
+	H := encodeToCurveTryAndIncrement(publicKey, alpha)
 
 	// U = s*B - c*Y
 	U := new(edwards25519.Point).Negate(Y)
