@@ -3,7 +3,7 @@ package bls
 import (
 	"go.dedis.ch/kyber/v3"
 	"go.dedis.ch/kyber/v3/pairing/bn256"
-	"go.dedis.ch/kyber/v3/sign/bls"
+	"go.dedis.ch/kyber/v3/sign/bdn"
 	"golang.org/x/crypto/blake2b"
 )
 
@@ -13,7 +13,7 @@ type PublicKey = kyber.Point
 var suite = bn256.NewSuite()
 
 func GenerateKey() (PublicKey, PrivateKey) {
-	s, P := bls.NewKeyPair(suite, suite.RandomStream())
+	s, P := bdn.NewKeyPair(suite, suite.RandomStream())
 
 	return P, s
 }
@@ -31,7 +31,7 @@ func (p Proof) Bytes() []byte {
 }
 
 func Prove(privateKey PrivateKey, alphaString []byte) Proof {
-	proof, err := bls.Sign(suite, privateKey, alphaString)
+	proof, err := bdn.Sign(suite, privateKey, alphaString)
 	if err != nil {
 		panic(err)
 	}
@@ -44,7 +44,7 @@ func ProofToHash(piString []byte) ([]byte, error) {
 }
 
 func Verify(publicKey PublicKey, alphaString []byte, piString []byte) (bool, []byte) {
-	if bls.Verify(suite, publicKey, alphaString, piString) != nil {
+	if bdn.Verify(suite, publicKey, alphaString, piString) != nil {
 		return false, nil
 	}
 
