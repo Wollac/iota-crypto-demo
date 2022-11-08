@@ -8,6 +8,11 @@ import (
 // Bytes is a slice of bytes that marshals/unmarshals as a string in hexadecimal encoding.
 type Bytes []byte
 
+// Bytes returns the underlying byte slice.
+func (b Bytes) Bytes() []byte {
+	return b
+}
+
 // MarshalText implements the encoding.TextMarshaler interface.
 func (b Bytes) MarshalText() ([]byte, error) {
 	dst := make([]byte, hex.EncodedLen(len(b)))
