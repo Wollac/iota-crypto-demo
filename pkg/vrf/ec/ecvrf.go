@@ -1,7 +1,6 @@
 package ec
 
 import (
-	"bytes"
 	"crypto/sha512"
 	"errors"
 	"fmt"
@@ -19,6 +18,8 @@ const (
 	PrivateKeySize = 64
 	// SeedSize is the size, in bytes, of private key seeds. These are the private key representations used by RFC 8032.
 	SeedSize = 32
+	// ProofSize is the size, in bytes, of proofs.
+	ProofSize = ptLen + cLen + qLen
 )
 
 type (
@@ -35,10 +36,9 @@ func NewKeyFromSeed(seed []byte) ed25519.PrivateKey {
 }
 
 const (
-	ptLen = 32                  // length of a curve point in bytes
-	cLen  = 16                  // length of a challenge scalar in bytes
-	qLen  = 32                  // length of a scalar in bytes
-	piLen = ptLen + cLen + qLen // length of a proof in bytes
+	ptLen = 32 // length of a curve point in bytes
+	cLen  = 16 // length of a challenge scalar in bytes
+	qLen  = 32 // length of a scalar in bytes
 
 	hLen = sha512.Size // length of a checksum in bytes
 )
@@ -77,7 +77,7 @@ func (p *Proof) Hash() []byte {
 }
 
 func (p *Proof) Bytes() []byte {
-	piString := make([]byte, piLen)
+	piString := make([]byte, ProofSize)
 	copy(piString[:ptLen], p.gamma.Bytes())
 	copy(piString[ptLen:(ptLen+cLen)], p.c.Bytes())
 	copy(piString[(ptLen+cLen):], p.s.Bytes())
@@ -98,7 +98,7 @@ func (p *Proof) MarshalBinary() ([]byte, error) {
 }
 
 func (p *Proof) UnmarshalBinary(data []byte) error {
-	if l := len(data); l != piLen {
+	if l := len(data); l != ProofSize {
 		return errors.New("invalid encoding length")
 	}
 
@@ -127,9 +127,10 @@ func Prove(privateKey PrivateKey, alphaString []byte) *Proof {
 	if l := len(privateKey); l != PrivateKeySize {
 		panic("ecvrf: bad private key length: " + strconv.Itoa(l))
 	}
-	secretKey, publicKey := privateKey[:SeedSize], privateKey[SeedSize:]
+	seed, publicKey := privateKey[:SeedSize], privateKey[SeedSize:]
 
-	hashedSkString := sha512.Sum512(secretKey)
+	// Use SK to derive the VRF secret scalar x and the VRF public key Y = x*B
+	hashedSkString := sha512.Sum512(seed)
 	x, err := edwards25519.NewScalar().SetBytesWithClamping(hashedSkString[:32])
 	if err != nil {
 		panic("ecvrf: internal error: setting scalar failed")
@@ -139,14 +140,26 @@ func Prove(privateKey PrivateKey, alphaString []byte) *Proof {
 		panic("ecvrf: invalid public key part: " + err.Error())
 	}
 
+	// H = ECVRF_encode_to_curve(encode_to_curve_salt, alpha_string)
 	H := encodeToCurveTryAndIncrement(publicKey, alphaString)
-	hString := H.Bytes()
 
+	// Gamma = x*H
 	Gamma := new(edwards25519.Point).ScalarMult(x, H)
 
-	k := nonceGenerationRFC8032(hashedSkString[:], hString)
+	// k = ECVRF_nonce_generation(SK, h_string)
+	kh := sha512.New()
+	kh.Write(hashedSkString[32:])
+	kh.Write(H.Bytes())
+	kString := make([]byte, 0, hLen)
+	kString = kh.Sum(kString)
+	k, err := edwards25519.NewScalar().SetUniformBytes(kString)
+	if err != nil {
+		panic("ecvrf: internal error: setting scalar failed")
+	}
 
+	// c = ECVRF_challenge_generation(Y, H, Gamma, k*B, k*H)
 	c := challengeGeneration(Y, H, Gamma, new(edwards25519.Point).ScalarBaseMult(k), new(edwards25519.Point).ScalarMult(k, H))
+	// s = (k + c*x) mod q
 	s := edwards25519.NewScalar().MultiplyAdd(c, x, k)
 
 	return &Proof{Gamma, c, s}
@@ -166,7 +179,7 @@ func Verify(publicKey PublicKey, alphaString []byte, piString []byte) (bool, []b
 		panic("ecvrf: bad public key length: " + strconv.Itoa(l))
 	}
 
-	Y, err := (&edwards25519.Point{}).SetBytes(publicKey)
+	Y, err := new(edwards25519.Point).SetBytes(publicKey)
 	if err != nil {
 		return false, nil
 	}
@@ -175,36 +188,25 @@ func Verify(publicKey PublicKey, alphaString []byte, piString []byte) (bool, []b
 		return false, nil
 	}
 
+	// H = ECVRF_encode_to_curve(encode_to_curve_salt, alpha_string)
 	H := encodeToCurveTryAndIncrement(publicKey, alphaString)
 
-	U := new(edwards25519.Point).ScalarBaseMult(D.s)
-	U.Subtract(U, new(edwards25519.Point).ScalarMult(D.c, Y))
+	// U = s*B - c*Y
+	U := new(edwards25519.Point).Negate(Y)
+	U.VarTimeDoubleScalarBaseMult(D.c, U, D.s)
 
-	V := new(edwards25519.Point).ScalarMult(D.s, H)
-	V.Subtract(V, new(edwards25519.Point).ScalarMult(D.c, D.gamma))
+	// V = s*H - c*Gamma
+	V := new(edwards25519.Point).Negate(D.gamma)
+	V.VarTimeMultiScalarMult([]*edwards25519.Scalar{D.s, D.c}, []*edwards25519.Point{H, V})
 
+	// c' = ECVRF_challenge_generation(Y, H, Gamma, U, V)
 	checkC := challengeGeneration(Y, H, D.gamma, U, V)
-	if !bytes.Equal(D.c.Bytes(), checkC.Bytes()) {
+	// If c and c' are equal, output ("VALID", ECVRF_proof_to_hash(pi_string))
+	if D.c.Equal(checkC) != 1 {
 		return false, nil
 	}
 
 	return true, D.Hash()
-}
-
-func nonceGenerationRFC8032(hashedSkString []byte, hString []byte) *edwards25519.Scalar {
-	truncatedHashedSkString := hashedSkString[32:64]
-
-	h := sha512.New()
-	h.Write(truncatedHashedSkString)
-	h.Write(hString)
-	kString := make([]byte, 0, hLen)
-	kString = h.Sum(kString)
-	k, err := edwards25519.NewScalar().SetUniformBytes(kString)
-	if err != nil {
-		panic("ecvrf: internal error: setting scalar failed")
-	}
-
-	return k
 }
 
 func encodeToCurveTryAndIncrement(encodeToCurveSalt []byte, alphaString []byte) *edwards25519.Point {
