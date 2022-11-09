@@ -16,7 +16,7 @@ const (
 	// PublicKeySize is the size, in bytes, of public keys as used in this package.
 	PublicKeySize = 32
 	// PrivateKeySize is the size, in bytes, of private keys as used in this package.
-	PrivateKeySize = 64
+	PrivateKeySize = SeedSize + PublicKeySize
 	// SeedSize is the size, in bytes, of private key seeds. These are the private key representations used by RFC 8032.
 	SeedSize = 32
 	// ProofSize is the size, in bytes, of proofs.
@@ -30,14 +30,13 @@ type (
 
 // GenerateKey generates a public/private key pair using entropy from rand.
 // If rand is nil, crypto/rand.Reader will be used.
+// The key generation is 100% compatible with crypto/ed25519.
 func GenerateKey(rand io.Reader) (PublicKey, PrivateKey, error) {
 	return ed25519.GenerateKey(rand)
 }
 
-// NewKeyFromSeed calculates a private key from a seed. It will panic if
-// len(seed) is not SeedSize. This function is provided for interoperability
-// with RFC 8032. RFC 8032's private keys correspond to seeds in this
-// package.
+// NewKeyFromSeed calculates a private key from a seed.
+// It will panic if len(seed) is not SeedSize.
 func NewKeyFromSeed(seed []byte) ed25519.PrivateKey {
 	return ed25519.NewKeyFromSeed(seed)
 }
@@ -61,6 +60,8 @@ var (
 
 	proofToHashDomainSeparatorFront = []byte{0x03}
 	proofToHashDomainSeparatorBack  = []byte{0x00}
+
+	identity = edwards25519.NewIdentityPoint()
 )
 
 // Proof represents a VRF proof.
@@ -201,6 +202,11 @@ func Verify(publicKey PublicKey, alpha []byte, piString []byte) (bool, []byte) {
 	if err != nil {
 		return false, nil
 	}
+	// If validate_key, run ECVRF_validate_key(Y)
+	if !validateKey(Y) {
+		return false, nil
+	}
+	// D = ECVRF_decode_proof(pi_string)
 	D, err := new(Proof).SetBytes(piString)
 	if err != nil {
 		return false, nil
@@ -241,7 +247,12 @@ func encodeToCurveTryAndIncrement(encodeToCurveSalt []byte, alphaString []byte) 
 
 		hashString = h.Sum(hashString[:0])
 		if _, err := H.SetBytes(hashString[:ptLen]); err == nil {
-			return H.MultByCofactor(H)
+			// set H = cofactor*H
+			H.MultByCofactor(H)
+			// only return prime order H
+			if H.Equal(identity) != 1 {
+				return H
+			}
 		}
 		h.Reset()
 	}
@@ -273,4 +284,12 @@ func challengeGeneration(P1, P2, P3, P4, P5 *edwards25519.Point) *edwards25519.S
 	}
 
 	return c
+}
+
+// validateKey returns whether Y is of prime order.
+func validateKey(Y *edwards25519.Point) bool {
+	// Let Y' = cofactor*Y
+	checkY := new(edwards25519.Point).MultByCofactor(Y)
+	// If Y' is the identity element of the elliptic curve group, output "INVALID" and stop
+	return checkY.Equal(identity) != 1
 }
