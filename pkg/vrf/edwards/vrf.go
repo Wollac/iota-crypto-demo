@@ -1,5 +1,5 @@
-// Package ec implements the ECVRF-EDWARDS25519-SHA512-TAI VRF according to draft-irtf-cfrg-vrf-15.
-package ec
+// Package edwards implements the ECVRF-EDWARDS25519-SHA512-TAI VRF according to draft-irtf-cfrg-vrf-15.
+package edwards
 
 import (
 	"crypto/sha512"
@@ -124,12 +124,12 @@ func (p *Proof) UnmarshalBinary(data []byte) error {
 
 	cString := make([]byte, qLen)
 	copy(cString, data[ptLen:(ptLen+cLen)])
-	p.c, err = edwards25519.NewScalar().SetCanonicalBytes(cString)
+	p.c, err = new(edwards25519.Scalar).SetCanonicalBytes(cString)
 	if err != nil {
-		panic("ecvrf: internal error: setting challenge scalar failed")
+		panic("edwards: internal error: setting challenge scalar failed")
 	}
 
-	p.s, err = edwards25519.NewScalar().SetCanonicalBytes(data[(ptLen + cLen):])
+	p.s, err = new(edwards25519.Scalar).SetCanonicalBytes(data[(ptLen + cLen):])
 	if err != nil {
 		return fmt.Errorf("invalid proof: %w", err)
 	}
@@ -140,19 +140,19 @@ func (p *Proof) UnmarshalBinary(data []byte) error {
 // Prove computes the VRF proof for the input alpha.
 func Prove(privateKey PrivateKey, alpha []byte) *Proof {
 	if l := len(privateKey); l != PrivateKeySize {
-		panic("ecvrf: bad private key length: " + strconv.Itoa(l))
+		panic("edwards: bad private key length: " + strconv.Itoa(l))
 	}
 	seed, publicKey := privateKey[:SeedSize], privateKey[SeedSize:]
 
 	// Use SK to derive the VRF secret scalar x and the VRF public key Y = x*B
-	hashedSkString := sha512.Sum512(seed)
-	x, err := edwards25519.NewScalar().SetBytesWithClamping(hashedSkString[:32])
+	hashedSKString := sha512.Sum512(seed)
+	x, err := new(edwards25519.Scalar).SetBytesWithClamping(hashedSKString[:32])
 	if err != nil {
-		panic("ecvrf: internal error: setting scalar failed")
+		panic("edwards: internal error: setting scalar failed")
 	}
 	Y, err := new(edwards25519.Point).SetBytes(publicKey)
 	if err != nil {
-		panic("ecvrf: invalid public key part: " + err.Error())
+		panic("edwards: invalid public key part: " + err.Error())
 	}
 
 	// H = ECVRF_encode_to_curve(encode_to_curve_salt, alpha_string)
@@ -163,19 +163,19 @@ func Prove(privateKey PrivateKey, alpha []byte) *Proof {
 
 	// k = ECVRF_nonce_generation(SK, h_string)
 	kh := sha512.New()
-	kh.Write(hashedSkString[32:])
+	kh.Write(hashedSKString[32:])
 	kh.Write(H.Bytes())
 	kString := make([]byte, 0, hLen)
 	kString = kh.Sum(kString)
-	k, err := edwards25519.NewScalar().SetUniformBytes(kString)
+	k, err := new(edwards25519.Scalar).SetUniformBytes(kString)
 	if err != nil {
-		panic("ecvrf: internal error: setting scalar failed")
+		panic("edwards: internal error: setting scalar failed")
 	}
 
 	// c = ECVRF_challenge_generation(Y, H, Gamma, k*B, k*H)
 	c := challengeGeneration(Y, H, Gamma, new(edwards25519.Point).ScalarBaseMult(k), new(edwards25519.Point).ScalarMult(k, H))
 	// s = (k + c*x) mod q
-	s := edwards25519.NewScalar().MultiplyAdd(c, x, k)
+	s := k.MultiplyAdd(c, x, k)
 
 	return &Proof{Gamma, c, s}
 }
@@ -195,7 +195,7 @@ func ProofToHash(piString []byte) ([]byte, error) {
 // If the proof is valid, Verify also returns the VRF hash output.
 func Verify(publicKey PublicKey, alpha []byte, piString []byte) (bool, []byte) {
 	if l := len(publicKey); l != PublicKeySize {
-		panic("ecvrf: bad public key length: " + strconv.Itoa(l))
+		panic("edwards: bad public key length: " + strconv.Itoa(l))
 	}
 
 	Y, err := new(edwards25519.Point).SetBytes(publicKey)
@@ -257,7 +257,7 @@ func encodeToCurveTryAndIncrement(encodeToCurveSalt []byte, alphaString []byte) 
 		h.Reset()
 	}
 
-	panic("ecvrf: unable to compute hash")
+	panic("edwards: unable to compute hash")
 }
 
 func challengeGeneration(P1, P2, P3, P4, P5 *edwards25519.Point) *edwards25519.Scalar {
@@ -280,7 +280,7 @@ func challengeGeneration(P1, P2, P3, P4, P5 *edwards25519.Point) *edwards25519.S
 	c, err := edwards25519.NewScalar().SetCanonicalBytes(truncatedCString)
 	if err != nil {
 		// this should not happen as cLen is significantly smaller than qLen
-		panic("ecvrf: internal error: setting scalar failed")
+		panic("edwards: internal error: setting scalar failed")
 	}
 
 	return c

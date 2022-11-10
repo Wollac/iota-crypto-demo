@@ -4,7 +4,6 @@ import (
 	"go.dedis.ch/kyber/v3"
 	"go.dedis.ch/kyber/v3/pairing/bn256"
 	"go.dedis.ch/kyber/v3/sign/bdn"
-	"golang.org/x/crypto/blake2b"
 )
 
 type PrivateKey = kyber.Scalar
@@ -21,9 +20,10 @@ func GenerateKey() (PublicKey, PrivateKey) {
 type Proof []byte
 
 func (p Proof) Hash() []byte {
-	betaString := blake2b.Sum512(p)
+	h := suite.Hash()
+	h.Write(p)
 
-	return betaString[:]
+	return h.Sum(nil)
 }
 
 func (p Proof) Bytes() []byte {
