@@ -34,3 +34,12 @@ func (b *Bytes) UnmarshalText(text []byte) (err error) {
 func (b Bytes) String() string {
 	return hex.EncodeToString(b)
 }
+
+// MustDecodeString returns the bytes represented by the hexadecimal string s.
+func MustDecodeString(s string) []byte {
+	dst, err := hex.DecodeString(s)
+	if err != nil {
+		panic(err)
+	}
+	return dst
+}

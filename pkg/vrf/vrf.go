@@ -1,10 +1,8 @@
-// Package edwards implements the ECVRF-EDWARDS25519-SHA512-TAI VRF according to draft-irtf-cfrg-vrf-15.
-package edwards
+// Package vrf implements the ECVRF-EDWARDS25519-SHA512-TAI VRF according to draft-irtf-cfrg-vrf-15.
+package vrf
 
 import (
 	"crypto/sha512"
-	"errors"
-	"fmt"
 	"io"
 	"strconv"
 
@@ -61,81 +59,8 @@ var (
 	proofToHashDomainSeparatorFront = []byte{0x03}
 	proofToHashDomainSeparatorBack  = []byte{0x00}
 
-	identity = edwards25519.NewIdentityPoint()
+	identityPoint = edwards25519.NewIdentityPoint()
 )
-
-// Proof represents a VRF proof.
-type Proof struct {
-	gamma *edwards25519.Point
-	c     *edwards25519.Scalar
-	s     *edwards25519.Scalar
-}
-
-// Hash returns the VRF hash output corresponding to p.
-// Hash should be run only on p that is known to have been produced by Prove, or from within Verify.
-func (p *Proof) Hash() []byte {
-	gamma := new(edwards25519.Point).MultByCofactor(p.gamma)
-
-	h := sha512.New()
-	h.Write(suiteString)
-	h.Write(proofToHashDomainSeparatorFront)
-	h.Write(gamma.Bytes())
-	h.Write(proofToHashDomainSeparatorBack)
-	betaString := make([]byte, 0, hLen)
-	betaString = h.Sum(betaString)
-
-	return betaString
-}
-
-// Bytes returns the canonical 80-byte encoding of p.
-func (p *Proof) Bytes() []byte {
-	piString := make([]byte, ProofSize)
-	copy(piString[:ptLen], p.gamma.Bytes())
-	copy(piString[ptLen:(ptLen+cLen)], p.c.Bytes())
-	copy(piString[(ptLen+cLen):], p.s.Bytes())
-
-	return piString
-}
-
-// SetBytes sets p = x, where x is an 80-byte encoding of p.
-// If x does not represent a valid proof, SetBytes returns nil and an error.
-func (p *Proof) SetBytes(x []byte) (*Proof, error) {
-	if err := p.UnmarshalBinary(x); err != nil {
-		return nil, err
-	}
-
-	return p, nil
-}
-
-func (p *Proof) MarshalBinary() ([]byte, error) {
-	return p.Bytes(), nil
-}
-
-func (p *Proof) UnmarshalBinary(data []byte) error {
-	if l := len(data); l != ProofSize {
-		return errors.New("invalid encoding length")
-	}
-
-	var err error
-	p.gamma, err = new(edwards25519.Point).SetBytes(data[:ptLen])
-	if err != nil {
-		return fmt.Errorf("invalid point: %w", err)
-	}
-
-	cString := make([]byte, qLen)
-	copy(cString, data[ptLen:(ptLen+cLen)])
-	p.c, err = new(edwards25519.Scalar).SetCanonicalBytes(cString)
-	if err != nil {
-		panic("edwards: internal error: setting challenge scalar failed")
-	}
-
-	p.s, err = new(edwards25519.Scalar).SetCanonicalBytes(data[(ptLen + cLen):])
-	if err != nil {
-		return fmt.Errorf("invalid proof: %w", err)
-	}
-
-	return nil
-}
 
 // Prove computes the VRF proof for the input alpha.
 func Prove(privateKey PrivateKey, alpha []byte) *Proof {
@@ -150,13 +75,10 @@ func Prove(privateKey PrivateKey, alpha []byte) *Proof {
 	if err != nil {
 		panic("edwards: internal error: setting scalar failed")
 	}
-	Y, err := new(edwards25519.Point).SetBytes(publicKey)
-	if err != nil {
-		panic("edwards: invalid public key part: " + err.Error())
-	}
 
 	// H = ECVRF_encode_to_curve(encode_to_curve_salt, alpha_string)
 	H := encodeToCurveTryAndIncrement(publicKey, alpha)
+	hString := H.Bytes()
 
 	// Gamma = x*H
 	Gamma := new(edwards25519.Point).ScalarMult(x, H)
@@ -164,7 +86,7 @@ func Prove(privateKey PrivateKey, alpha []byte) *Proof {
 	// k = ECVRF_nonce_generation(SK, h_string)
 	kh := sha512.New()
 	kh.Write(hashedSKString[32:])
-	kh.Write(H.Bytes())
+	kh.Write(hString)
 	kString := make([]byte, 0, hLen)
 	kString = kh.Sum(kString)
 	k, err := new(edwards25519.Scalar).SetUniformBytes(kString)
@@ -173,7 +95,7 @@ func Prove(privateKey PrivateKey, alpha []byte) *Proof {
 	}
 
 	// c = ECVRF_challenge_generation(Y, H, Gamma, k*B, k*H)
-	c := challengeGeneration(Y, H, Gamma, new(edwards25519.Point).ScalarBaseMult(k), new(edwards25519.Point).ScalarMult(k, H))
+	c := challengeGeneration(publicKey, hString, Gamma, new(edwards25519.Point).ScalarBaseMult(k), new(edwards25519.Point).ScalarMult(k, H))
 	// s = (k + c*x) mod q
 	s := k.MultiplyAdd(c, x, k)
 
@@ -198,7 +120,7 @@ func Verify(publicKey PublicKey, alpha []byte, piString []byte) (bool, []byte) {
 		panic("edwards: bad public key length: " + strconv.Itoa(l))
 	}
 
-	Y, err := new(edwards25519.Point).SetBytes(publicKey)
+	Y, err := newPointFromCanonicalBytes(publicKey)
 	if err != nil {
 		return false, nil
 	}
@@ -224,7 +146,7 @@ func Verify(publicKey PublicKey, alpha []byte, piString []byte) (bool, []byte) {
 	V.VarTimeMultiScalarMult([]*edwards25519.Scalar{D.s, D.c}, []*edwards25519.Point{H, V})
 
 	// c' = ECVRF_challenge_generation(Y, H, Gamma, U, V)
-	checkC := challengeGeneration(Y, H, D.gamma, U, V)
+	checkC := challengeGeneration(publicKey, H.Bytes(), D.gamma, U, V)
 	// If c and c' are equal, output ("VALID", ECVRF_proof_to_hash(pi_string))
 	if D.c.Equal(checkC) != 1 {
 		return false, nil
@@ -236,7 +158,6 @@ func Verify(publicKey PublicKey, alpha []byte, piString []byte) (bool, []byte) {
 func encodeToCurveTryAndIncrement(encodeToCurveSalt []byte, alphaString []byte) *edwards25519.Point {
 	h := sha512.New()
 	hashString := make([]byte, 0, hLen)
-	H := new(edwards25519.Point)
 	for ctr := 0; ctr <= 0xff; ctr++ {
 		h.Write(suiteString)
 		h.Write(encodeToCurveDomainSeparatorFront)
@@ -246,11 +167,11 @@ func encodeToCurveTryAndIncrement(encodeToCurveSalt []byte, alphaString []byte) 
 		h.Write(encodeToCurveDomainSeparatorBack)
 
 		hashString = h.Sum(hashString[:0])
-		if _, err := H.SetBytes(hashString[:ptLen]); err == nil {
+		if H, err := newPointFromCanonicalBytes(hashString[:ptLen]); err == nil {
 			// set H = cofactor*H
 			H.MultByCofactor(H)
 			// only return prime order H
-			if H.Equal(identity) != 1 {
+			if H.Equal(identityPoint) != 1 {
 				return H
 			}
 		}
@@ -260,12 +181,12 @@ func encodeToCurveTryAndIncrement(encodeToCurveSalt []byte, alphaString []byte) 
 	panic("edwards: unable to compute hash")
 }
 
-func challengeGeneration(P1, P2, P3, P4, P5 *edwards25519.Point) *edwards25519.Scalar {
+func challengeGeneration(P1, P2 []byte, P3, P4, P5 *edwards25519.Point) *edwards25519.Scalar {
 	h := sha512.New()
 	h.Write(suiteString)
 	h.Write(challengeGenerationDomainSeparatorFront)
-	h.Write(P1.Bytes())
-	h.Write(P2.Bytes())
+	h.Write(P1)
+	h.Write(P2)
 	h.Write(P3.Bytes())
 	h.Write(P4.Bytes())
 	h.Write(P5.Bytes())
@@ -291,5 +212,5 @@ func validateKey(Y *edwards25519.Point) bool {
 	// Let Y' = cofactor*Y
 	checkY := new(edwards25519.Point).MultByCofactor(Y)
 	// If Y' is the identity element of the elliptic curve group, output "INVALID" and stop
-	return checkY.Equal(identity) != 1
+	return checkY.Equal(identityPoint) != 1
 }
