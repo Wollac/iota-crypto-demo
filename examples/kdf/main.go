@@ -7,16 +7,16 @@ import (
 	"os"
 	"strings"
 
+	"github.com/iotaledger/iota-crypto-demo/pkg/bech32/address"
+	"github.com/iotaledger/iota-crypto-demo/pkg/bip32path"
+	"github.com/iotaledger/iota-crypto-demo/pkg/bip39"
+	"github.com/iotaledger/iota-crypto-demo/pkg/slip10"
+	"github.com/iotaledger/iota-crypto-demo/pkg/slip10/eddsa"
+	"github.com/iotaledger/iota-crypto-demo/pkg/slip10/elliptic"
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/kerl"
 	"github.com/iotaledger/iota.go/kerl/sha3"
 	"github.com/iotaledger/iota.go/trinary"
-	"github.com/wollac/iota-crypto-demo/pkg/bech32/address"
-	"github.com/wollac/iota-crypto-demo/pkg/bip32path"
-	"github.com/wollac/iota-crypto-demo/pkg/bip39"
-	"github.com/wollac/iota-crypto-demo/pkg/slip10"
-	"github.com/wollac/iota-crypto-demo/pkg/slip10/eddsa"
-	"github.com/wollac/iota-crypto-demo/pkg/slip10/elliptic"
 )
 
 var (

@@ -4,8 +4,8 @@ import (
 	"math/rand"
 	"testing"
 
+	"github.com/iotaledger/iota-crypto-demo/internal/hexutil"
 	"github.com/stretchr/testify/require"
-	"github.com/wollac/iota-crypto-demo/internal/hexutil"
 )
 
 func TestNewPointFromCanonicalBytes(t *testing.T) {

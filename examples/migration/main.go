@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/iotaledger/iota-crypto-demo/internal/rand"
+	"github.com/iotaledger/iota-crypto-demo/pkg/ed25519"
+	"github.com/iotaledger/iota-crypto-demo/pkg/migration"
 	"github.com/iotaledger/iota.go/checksum"
 	"github.com/iotaledger/iota.go/consts"
-	"github.com/wollac/iota-crypto-demo/internal/rand"
-	"github.com/wollac/iota-crypto-demo/pkg/ed25519"
-	"github.com/wollac/iota-crypto-demo/pkg/migration"
 	"golang.org/x/crypto/blake2b"
 )
 

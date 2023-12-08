@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/iotaledger/iota-crypto-demo/internal/hexutil"
 	"github.com/stretchr/testify/require"
-	"github.com/wollac/iota-crypto-demo/internal/hexutil"
 )
 
 var nullSeed = make([]byte, SeedSize)

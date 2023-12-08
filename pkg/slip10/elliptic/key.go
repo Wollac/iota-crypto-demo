@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/wollac/iota-crypto-demo/pkg/slip10"
+	"github.com/iotaledger/iota-crypto-demo/pkg/slip10"
 )
 
 // PrivateKey implements slip10.Key and represents a private key for elliptic.Curve.

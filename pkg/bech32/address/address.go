@@ -6,8 +6,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/wollac/iota-crypto-demo/pkg/bech32"
-	"github.com/wollac/iota-crypto-demo/pkg/ed25519"
+	"github.com/iotaledger/iota-crypto-demo/pkg/bech32"
+	"github.com/iotaledger/iota-crypto-demo/pkg/ed25519"
 	"golang.org/x/crypto/blake2b"
 )
 

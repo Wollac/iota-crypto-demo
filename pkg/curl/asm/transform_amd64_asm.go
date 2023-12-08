@@ -1,10 +1,10 @@
 package main
 
 import (
+	"github.com/iotaledger/iota-crypto-demo/pkg/curl"
 	. "github.com/mmcloughlin/avo/build"
 	. "github.com/mmcloughlin/avo/operand"
 	. "github.com/mmcloughlin/avo/reg"
-	"github.com/wollac/iota-crypto-demo/pkg/curl"
 )
 
 const unroll = 2
@@ -12,7 +12,7 @@ const unroll = 2
 //go:generate go run transform_amd64_asm.go -out ../transform_amd64.s -stubs ../transform_amd64.go -pkg curl
 
 func main() {
-	Package("github.com/wollac/iota-crypto-demo/pkg/curl")
+	Package("github.com/iotaledger/iota-crypto-demo/pkg/curl")
 	ConstraintExpr("amd64,gc,!purego")
 	transform()
 	Generate()

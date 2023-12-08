@@ -4,8 +4,8 @@ import (
 	"crypto/elliptic"
 	"math/big"
 
-	"github.com/wollac/iota-crypto-demo/pkg/slip10"
-	"github.com/wollac/iota-crypto-demo/pkg/slip10/elliptic/internal/btccurve"
+	"github.com/iotaledger/iota-crypto-demo/pkg/slip10"
+	"github.com/iotaledger/iota-crypto-demo/pkg/slip10/elliptic/internal/btccurve"
 )
 
 // Curve is an abstract implementation of slip10.Curve based on elliptic.Curve.

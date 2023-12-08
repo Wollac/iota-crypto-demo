@@ -5,9 +5,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/iotaledger/iota-crypto-demo/pkg/curl"
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/trinary"
-	"github.com/wollac/iota-crypto-demo/pkg/curl"
 )
 
 func BenchmarkCurlTransaction(b *testing.B) {

@@ -7,10 +7,10 @@ import (
 	"os"
 	"strings"
 
+	"github.com/iotaledger/iota-crypto-demo/pkg/bip39"
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/kerl"
 	"github.com/iotaledger/iota.go/trinary"
-	"github.com/wollac/iota-crypto-demo/pkg/bip39"
 )
 
 var (

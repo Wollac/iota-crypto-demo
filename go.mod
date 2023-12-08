@@ -1,4 +1,4 @@
-module github.com/wollac/iota-crypto-demo
+module github.com/iotaledger/iota-crypto-demo
 
 go 1.17
 

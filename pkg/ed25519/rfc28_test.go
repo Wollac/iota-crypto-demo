@@ -7,10 +7,10 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/iotaledger/iota-crypto-demo/internal/hexutil"
+	"github.com/iotaledger/iota-crypto-demo/pkg/bech32/address"
+	"github.com/iotaledger/iota-crypto-demo/pkg/ed25519"
 	"github.com/stretchr/testify/require"
-	"github.com/wollac/iota-crypto-demo/internal/hexutil"
-	"github.com/wollac/iota-crypto-demo/pkg/bech32/address"
-	"github.com/wollac/iota-crypto-demo/pkg/ed25519"
 )
 
 type testCase struct {

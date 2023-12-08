@@ -10,7 +10,7 @@ import (
 	"math/rand"
 	"strings"
 
-	"github.com/wollac/iota-crypto-demo/pkg/merkle"
+	"github.com/iotaledger/iota-crypto-demo/pkg/merkle"
 
 	_ "golang.org/x/crypto/blake2b" // BLAKE2b_256 is the default hashing algorithm
 )

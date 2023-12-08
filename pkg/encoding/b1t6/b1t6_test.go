@@ -8,9 +8,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/iotaledger/iota-crypto-demo/pkg/encoding/b1t6"
 	"github.com/iotaledger/iota.go/trinary"
 	"github.com/stretchr/testify/assert"
-	"github.com/wollac/iota-crypto-demo/pkg/encoding/b1t6"
 )
 
 func TestValidEncodings(t *testing.T) {
