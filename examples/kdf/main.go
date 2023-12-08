@@ -12,11 +12,6 @@ import (
 	"github.com/iotaledger/iota-crypto-demo/pkg/bip39"
 	"github.com/iotaledger/iota-crypto-demo/pkg/slip10"
 	"github.com/iotaledger/iota-crypto-demo/pkg/slip10/eddsa"
-	"github.com/iotaledger/iota-crypto-demo/pkg/slip10/elliptic"
-	"github.com/iotaledger/iota.go/consts"
-	"github.com/iotaledger/iota.go/kerl"
-	"github.com/iotaledger/iota.go/kerl/sha3"
-	"github.com/iotaledger/iota.go/trinary"
 )
 
 var (
@@ -94,25 +89,10 @@ func run() error {
 	fmt.Printf(" optional passphrase:\t\"%s\"\n", *passphrase)
 	fmt.Printf(" master seed (%d-byte):\t%x\n", len(seed), seed)
 
-	fmt.Println("\n==> Legacy IOTA Seed Derivation (Ledger App)")
-
-	curve := elliptic.Secp256k1()
-	key, err := slip10.DeriveKeyFromPath(seed, curve, path)
-	if err != nil {
-		return fmt.Errorf("failed deriving %s key: %w", curve.Name(), err)
-	}
-
-	fmt.Printf(" SLIP-10 curve seed:\t%s\n", curve.HmacKey())
-	fmt.Printf(" SLIP-10 address path:\t%s\n", path)
-
-	fmt.Printf(" private key (%d-byte):\t%x\n", slip10.PrivateKeySize, key.Key)
-	fmt.Printf(" chain code (%d-byte):\t%x\n", slip10.ChainCodeSize, key.ChainCode)
-	fmt.Printf(" IOTA seed (%d-tryte):\t%s\n", consts.HashTrytesSize, iotaSeedFromKey(key))
-
 	fmt.Println("\n==> Ed25519 Private Key Derivation")
 
-	curve = eddsa.Ed25519()
-	key, err = slip10.DeriveKeyFromPath(seed, curve, path)
+	curve := eddsa.Ed25519()
+	key, err := slip10.DeriveKeyFromPath(seed, curve, path)
 	if err != nil {
 		return fmt.Errorf("failed deriving %s key: %w", curve.Name(), err)
 	}
@@ -142,28 +122,4 @@ func generateEntropy(size int) ([]byte, error) {
 		return nil, err
 	}
 	return entropy, nil
-}
-
-// Legacy IOTA seed derivation as implemented in the blue-app-iota:
-// https://github.com/IOTA-Ledger/blue-app-iota/blob/master/docs/specification.md#iota-seed
-func iotaSeedFromKey(key *slip10.ExtendedKey) trinary.Hash {
-	// the 512 bits extended private key (k, c) of the provided address path is then hashed using Keccak-384.
-	hash := sha3.NewLegacyKeccak384()
-
-	k := key.Key.Bytes()
-	c := key.ChainCode
-
-	// as Kerl usually expects multiples of 48 bytes as input, the following 98 bytes are absorbed:
-	// k[0:32] + c[0:16] + k[16:32] + c[0:32]
-	hash.Write(k[0:32])
-	hash.Write(c[0:16])
-	hash.Write(k[16:32])
-	hash.Write(c[0:32])
-
-	// derive the  final 243 trit IOTA seed from the resulting hash
-	seed, err := kerl.KerlBytesToTrytes(hash.Sum(nil))
-	if err != nil {
-		panic(err)
-	}
-	return seed
 }

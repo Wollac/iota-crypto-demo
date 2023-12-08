@@ -3,6 +3,7 @@ package main
 import (
 	"crypto"
 	"encoding"
+	"encoding/hex"
 	"flag"
 	"fmt"
 	"math/bits"
@@ -10,11 +11,8 @@ import (
 	"strings"
 
 	"github.com/iotaledger/iota-crypto-demo/pkg/merkle"
-	"github.com/iotaledger/iota.go/consts"
-	"github.com/iotaledger/iota.go/encoding/t5b1"
-	"github.com/iotaledger/iota.go/trinary"
 
-	_ "golang.org/x/crypto/blake2b" // BLAKE2b_512 is the default hashing algorithm
+	_ "golang.org/x/crypto/blake2b" // BLAKE2b_256 is the default hashing algorithm
 )
 
 var (
@@ -25,34 +23,35 @@ var (
 	)
 )
 
-type Hash trinary.Hash
+type ID [32]byte
 
-func (h Hash) MarshalBinary() ([]byte, error) { return t5b1.EncodeTrytes(trinary.Trytes(h)), nil }
-func (h Hash) String() string                 { return string(h) }
+func (i ID) MarshalBinary() ([]byte, error) {
+	return i[:], nil
+}
+
+func (i ID) String() string {
+	return hex.EncodeToString(i[:])
+}
 
 func main() {
 	flag.Parse()
 
-	var hashes []encoding.BinaryMarshaler
+	var data []encoding.BinaryMarshaler
 	for i := 0; i < *numHashes; i++ {
-		hashes = append(hashes, randomHash(consts.HashTrytesSize))
+		data = append(data, randomID())
 	}
 
-	fmt.Println("==> input tx hashes")
-	for i := range hashes {
-		fmt.Printf(" d[%d]: %s\n", i, hashes[i])
+	fmt.Println("==> input message ids")
+	for i := range data {
+		fmt.Printf(" d[%d]: %s\n", i, data[i])
 	}
-	fmt.Printf("\n==> Merkle tree with %d leafs\n", len(hashes))
-	printTree(merkle.NewHasher(crypto.BLAKE2b_512), hashes)
+	fmt.Printf("\n==> Merkle tree with %d leafs\n", len(data))
+	printTree(merkle.NewHasher(crypto.BLAKE2b_256), data)
 }
 
-func randomHash(n int) Hash {
-	var trytes strings.Builder
-	trytes.Grow(n)
-	for i := 0; i < n; i++ {
-		trytes.WriteByte(consts.TryteAlphabet[rand.Intn(len(consts.TryteAlphabet))])
-	}
-	return Hash(trytes.String())
+func randomID() (id ID) {
+	rand.Read(id[:])
+	return id
 }
 
 // printTree pretty prints the Merkle tree.
